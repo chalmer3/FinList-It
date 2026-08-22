@@ -3,6 +3,7 @@
 <head>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FinList It — a tank for your tasks</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
@@ -374,6 +375,52 @@
     justify-content: space-between;
     align-items: center;
   }
+  .taskSubgridTitleText{ display:flex; align-items:center; gap:8px; }
+  .taskSubgridCloseBtn{
+    display:none;
+    background: rgba(255,255,255,.08);
+    color: var(--text-light);
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    align-items:center; justify-content:center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  #tasksToggleBtn{
+    display: none;
+    position: absolute;
+    left: 18px;
+    bottom: 18px;
+    width: 52px; height: 52px;
+    background: rgba(5, 32, 36, 0.75);
+    border: 1px solid var(--glass-border);
+    color: var(--text-light);
+    border-radius: 18px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1px;
+    font-size: 15px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    z-index: 20;
+    backdrop-filter: blur(6px);
+  }
+  #tasksToggleCount{
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--seafoam);
+  }
+  #taskSubgridScrim{
+    display:none;
+    position: fixed;
+    inset: 0;
+    background: rgba(3,16,18,0.5);
+    z-index: 19;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+  }
+  #taskSubgridScrim.show{ opacity: 1; pointer-events: auto; }
   .taskTableContainer{
     overflow-y: auto;
     flex: 1;
@@ -561,6 +608,7 @@
 
   @media(max-width:700px){
     header{padding:10px 12px 36px 12px}.tagline{display:none!important}.brand{min-width:0}.hud{gap:5px}.stat{min-width:48px}.hudBtn{padding:8px}
+    .hudBtnLabel{display:none}
     .island-container{ left: 110px; scale: 0.8; }
     .tankComposer{
       top: 14px;
@@ -568,8 +616,44 @@
     }
     .segLabel{display:none}.segBtn{padding:8px}
     #addBtn span{display:none}#addBtn{padding:8px 12px}
-    .taskSubgrid{ display: none; }
+
+    /* Task subgrid becomes a bottom sheet, opened via the floating list button */
+    .taskSubgrid{
+      display: flex;
+      left: 12px; right: 12px; bottom: 0;
+      width: auto;
+      max-height: 62vh;
+      border-radius: 18px 18px 0 0;
+      transform: translateY(110%);
+      transition: transform .22s ease;
+      z-index: 25;
+    }
+    .taskSubgrid.mobileOpen{ transform: translateY(0); }
+    .taskSubgridCloseBtn{ display:flex; }
+    #tasksToggleBtn{ display: flex; }
+    #taskSubgridScrim{ display: block; }
+    #basketBtn{ width: 52px; height: 52px; right: 12px; bottom: 18px; }
+    #basketBtn svg{ width: 28px; height: 28px; }
+
+    /* Shop / custom fish panel */
+    .shopHeader h2{ font-size: 16px; }
+    .shopTabs{ flex-wrap: wrap; }
+    .shopTab{ padding: 7px 10px; font-size: 12px; flex: 1 1 auto; text-align:center; }
+    .card{ padding: 18px; }
+    .customFishPanel, #presetFields, #svgFields{ grid-template-columns: 1fr !important; }
   }
+
+  @media(max-width:420px){
+    h1{ font-size: 19px; }
+    .sun, .cloud{ display:none; }
+    .island-container{ left: 60px; scale: 0.6; opacity:.85; }
+    .hud{ gap:4px; }
+    .stat{ min-width:auto; padding:5px 7px; }
+    .stat small{ display:none; }
+    #tasksToggleBtn{ width:46px; height:46px; }
+    #basketBtn{ width:46px; height:46px; }
+  }
+  
 </style>
 </head>
 <body>
@@ -606,8 +690,8 @@
     <div class="hud">
       <div class="stat"><span><i class="fa-solid fa-flask"></i></span><b id="points">0</b><small>XP</small></div>
       <div class="stat"><span><i class="fa-solid fa-trophy"></i></span><b id="level">1</b><small>LEVEL</small></div>
-      <button class="hudBtn" id="shopBtn" title="Fish Skin Shop"><i class="fa-solid fa-anchor"></i> Fish Port</button>
-      <button class="hudBtn" id="clearBtn" type="button" title="Empty the whole tank">Reset</button>
+      <button class="hudBtn" id="shopBtn" title="Fish Skin Shop"><i class="fa-solid fa-anchor"></i> <span class="hudBtnLabel">Fish Port</span></button>
+      <button class="hudBtn" id="clearBtn" type="button" title="Empty the whole tank"><i class="fa-solid fa-trash-can"></i> <span class="hudBtnLabel">Reset</span></button>
     </div>
   </header>
 
@@ -638,8 +722,8 @@
 
     <div class="taskSubgrid" id="taskSubgrid">
       <div class="taskSubgridTitle">
-        <span>📋 Tank Tasks</span>
-        <small id="subgridCount" style="color:var(--text-muted); font-size:11px;">0 active</small>
+        <div class="taskSubgridTitleText"><span>📋 Tank Tasks</span> <small id="subgridCount" style="color:var(--text-muted); font-size:11px;">0 active</small></div>
+        <button type="button" id="taskSubgridClose" class="taskSubgridCloseBtn" aria-label="Close task list"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="taskTableContainer">
         <table class="taskTable">
@@ -653,6 +737,12 @@
         </table>
       </div>
     </div>
+
+    <button type="button" id="tasksToggleBtn" title="View task list">
+      <i class="fa-solid fa-list-ul"></i>
+      <span id="tasksToggleCount">0</span>
+    </button>
+    <div id="taskSubgridScrim"></div>
 
     <div class="progressPill" id="levelProgress">
       <span id="progressText">0 / 100 XP to next level</span>
@@ -1074,8 +1164,10 @@
   function updateSubgrid(){
     const tbody = document.getElementById('taskTableBody');
     const countEl = document.getElementById('subgridCount');
+    const toggleCountEl = document.getElementById('tasksToggleCount');
     tbody.innerHTML = '';
     countEl.textContent = `${tasks.length} active`;
+    if(toggleCountEl) toggleCountEl.textContent = tasks.length;
 
     if(tasks.length === 0){
       tbody.innerHTML = `<tr><td colspan="2" style="color:var(--text-muted); text-align:center;">No tasks</td></tr>`;
@@ -1087,10 +1179,25 @@
       row.className = 'taskRow';
       const p = PRIORITY[t.priority || 'normal'];
       row.innerHTML = `<td>${escapeHTML(t.text)}</td><td><span class="priorityBadge ${p.className}">${p.label}</span></td>`;
-      row.addEventListener('click', () => openFishModal(t.id));
+      row.addEventListener('click', () => {
+        openFishModal(t.id);
+        closeTaskSheet();
+      });
       tbody.appendChild(row);
     });
   }
+
+  function openTaskSheet(){
+    document.getElementById('taskSubgrid').classList.add('mobileOpen');
+    document.getElementById('taskSubgridScrim').classList.add('show');
+  }
+  function closeTaskSheet(){
+    document.getElementById('taskSubgrid').classList.remove('mobileOpen');
+    document.getElementById('taskSubgridScrim').classList.remove('show');
+  }
+  document.getElementById('tasksToggleBtn').addEventListener('click', openTaskSheet);
+  document.getElementById('taskSubgridClose').addEventListener('click', closeTaskSheet);
+  document.getElementById('taskSubgridScrim').addEventListener('click', closeTaskSheet);
 
   function getSkin(id){
     return SKINS.find(s => s.id === id) || customSkins.find(s => s.id === id) || SKINS[0];
