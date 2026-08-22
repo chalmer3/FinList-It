@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<meta charset="UTF-8">
+<title>FinList It — a tank for your tasks</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --bg-deep: #052024;
+    --tank-top: #0E4A52;
+    --tank-bottom: #062F35;
+    --seafoam: #5EEAD4;
+    --coral: #FF6F59;
+    --sand: #E8C288;
+    --violet: #B9A6FF;
+    --text-light: #EAF6F6;
+    --text-muted: #8FB9BB;
+    --glass: rgba(234,246,246,0.06);
+    --glass-border: rgba(234,246,246,0.14);
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg-deep);
+    font-family: 'Inter', sans-serif;
+    color: var(--text-light);
+    overflow:hidden;
+  }
+
+  #app{ display:flex; flex-direction:column; height:100vh; width:100vw; position:relative; }
+
+  /* --- Island Header & Animated Waves Scene --- */
+  header{
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 38px 20px;
+    background: linear-gradient(180deg, #3a7bd5 0%, #3a8ccb 50%, #20639B 100%);
+    border-bottom: 2px solid var(--seafoam);
+    z-index: 30;
+    overflow: hidden;
+  }
+
+  /* Sun & Clouds Background */
+  .header-bg-decor {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .sun {
+    position: absolute;
+    top: 10px;
+    left: 280px;
+    width: 36px;
+    height: 36px;
+    background: #FFE57F;
+    border-radius: 50%;
+    box-shadow: 0 0 16px #FFE57F;
+  }
+  .cloud {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 20px;
+    animation: floatCloud 25s linear infinite;
+  }
+  .cloud1 { top: 12px; left: -80px; width: 70px; height: 18px; }
+  .cloud2 { top: 28px; left: -140px; width: 100px; height: 22px; animation-duration: 35s; animation-delay: 5s; }
+
+  @keyframes floatCloud {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(100vw + 200px)); }
+  }
+
+  /* Island Silhouette */
+  .island-container {
+    position: absolute;
+    bottom: 8px;
+    left: 180px;
+    width: 140px;
+    height: 50px;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Coastal Shoreline & Continuous Waves */
+  .ocean-waves {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 32px;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .shore-sand {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 8px;
+    background: var(--sand);
+    z-index: 4;
+  }
+  .wave {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 200%;
+    height: 24px;
+    background: repeat-x url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,0 C150,90 350,-40 500,40 C650,120 900,10 1200,40 L1200,120 L0,120 Z" fill="%235EEAD4" opacity="0.45"/></svg>');
+    background-size: 600px 24px;
+    animation: waveShore 6s ease-in-out infinite alternate;
+  }
+  .wave1 {
+    bottom: 4px;
+    opacity: 0.6;
+    animation-duration: 4.5s;
+  }
+  .wave2 {
+    bottom: 0px;
+    opacity: 0.9;
+    animation-duration: 3s;
+    animation-delay: -1.5s;
+  }
+
+  @keyframes waveShore {
+    0% { transform: translateX(0) translateY(4px); }
+    100% { transform: translateX(-300px) translateY(-3px); }
+  }
+
+  /* Header Controls UI */
+  .brand, .hud {
+    position: relative;
+    z-index: 10;
+  }
+
+  h1{
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+
+  .tagline{
+    font-size: 12px;
+    color: #e0f2fe;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    margin-right: auto;
+    display:none;
+  }
+  @media (min-width: 640px){ .tagline{ display:block; } }
+
+  button{
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    border: none;
+    outline: none;
+  }
+
+  #tank{
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--tank-top) 0%, var(--tank-bottom) 100%);
+    transition: background 0.4s ease;
+  }
+
+  /* Task Composer Component */
+  .tankComposer{
+    position: absolute;
+    z-index: 15;
+    left: 50%;
+    top: 24px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: min(520px, 90vw);
+    padding: 10px 14px;
+    background: rgba(5, 32, 36, 0.65);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+  .tankComposer:focus-within{
+    border-color: rgba(94,234,212,.55);
+    box-shadow: 0 14px 36px rgba(0,0,0,.4), 0 0 0 4px rgba(94,234,212,.08);
+  }
+  .composerInputRow{ display: flex; align-items: center; gap: 8px; width: 100%; }
+  .composerControlsRow{ display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+  .spark{ color: var(--seafoam); font-size: 17px; flex-shrink: 0; }
+  
+  #taskInput{
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: var(--text-light);
+    font-size: 15px;
+    font-weight: 500;
+    outline: none;
+    padding: 6px 0;
+  }
+  #taskInput::placeholder{ color: #72999b; }
+
+  .prioritySeg{ display: flex; gap: 2px; background: rgba(0,0,0,.2); padding: 3px; border-radius: 999px; }
+  .segBtn{
+    display: flex; align-items: center; gap: 5px;
+    background: transparent; color: var(--text-muted);
+    font-size: 12px; font-weight: 600; padding: 6px 10px;
+    border-radius: 999px; white-space: nowrap;
+    transition: background .15s ease, color .15s ease;
+  }
+  .segBtn:hover{ color: var(--text-light); }
+  .segBtn.active{ background: var(--seafoam); color: #06282C; }
+  .segBtn[data-value="high"].active{ background: #FFD166; color: #3A2600; }
+  .segBtn[data-value="urgent"].active{ background: var(--coral); color: #fff; }
+  .segIcon{ font-size: 13px; line-height: 1; }
+
+  #addBtn{
+    background: var(--seafoam);
+    color: #06282C;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    display: flex; align-items: center;
+    transition: background .15s ease, transform .12s ease;
+  }
+  #addBtn:hover{ background: #7BF2DE; transform: translateY(-1px); }
+  #addBtn span{ opacity: .55; margin-left: 5px; }
+
+  /* ambient bubbles */
+  .bubble{
+    position:absolute;
+    bottom: -20px;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 50%;
+    background: rgba(234,246,246,0.10);
+    animation: rise var(--dur) linear infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes rise{
+    0%{ transform: translateY(0) translateX(0); opacity:0; }
+    10%{ opacity: 0.8; }
+    100%{ transform: translateY(-110vh) translateX(20px); opacity: 0; }
+  }
+
+  #emptyState{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:6px;
+    color: var(--text-muted);
+    text-align:center;
+    pointer-events:none;
+    padding: 0 24px;
+  }
+  #emptyState .big{
+    font-family:'Baloo 2', sans-serif;
+    font-size: 18px;
+    color: var(--text-light);
+  }
+
+  .fish-wrap{
+    position:absolute;
+    left: -140px;
+    top: var(--lane);
+    width: 90px;
+    height: 54px;
+    animation: var(--swimname) var(--duration) linear infinite;
+    animation-delay: var(--sdelay);
+    z-index: 5;
+  }
+  .fish-bob{
+    width:100%; height:100%;
+    animation: bob var(--bobdur) ease-in-out infinite alternate;
+  }
+  .fish-flip{ transform: scaleX(-1); }
+
+  .fish-btn{
+    background: none;
+    padding: 0;
+    width: 100%; height: 100%;
+    display:block;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));
+    transition: transform .12s ease;
+  }
+  .fish-btn:hover{ transform: scale(1.08); }
+  .fish-btn svg{ width:100%; height:100%; display:block; }
+
+  @keyframes bob{
+    from{ transform: translateY(-6px) rotate(-2deg); }
+    to{ transform: translateY(6px) rotate(2deg); }
+  }
+  @keyframes swim-rtl{
+    from{ transform: translateX(0); }
+    to{ transform: translateX(calc(100vw + 200px)); }
+  }
+  @keyframes swim-ltr{
+    from{ transform: translateX(calc(100vw + 200px)); }
+    to{ transform: translateX(0); }
+  }
+
+  /* basket */
+  #basketBtn{
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    width: 62px; height: 62px;
+    background: var(--sand);
+    border-radius: 20px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    z-index: 20;
+    transition: transform .15s ease;
+  }
+  #basketBtn:hover{ transform: translateY(-2px) scale(1.03); }
+  #basketBtn svg{ width: 34px; height: 34px; }
+  #basketBtn.bump{ animation: bump .35s ease; }
+  @keyframes bump{
+    0%{ transform: scale(1); }
+    40%{ transform: scale(1.25); }
+    100%{ transform: scale(1); }
+  }
+
+  #basketCount{
+    position:absolute;
+    top: -6px; right: -6px;
+    background: var(--coral);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 20px; height: 20px;
+    border-radius: 999px;
+    display:flex; align-items:center; justify-content:center;
+    padding: 0 5px;
+    border: 2px solid var(--bg-deep);
+  }
+
+  /* Aquarium Task Table Subgrid */
+  .taskSubgrid{
+    position: absolute;
+    left: 18px;
+    bottom: 18px;
+    width: 320px;
+    max-height: 220px;
+    background: rgba(5, 32, 36, 0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 12px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .taskSubgridTitle{
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 14px;
+    margin: 0 0 8px 0;
+    color: var(--seafoam);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .taskTableContainer{
+    overflow-y: auto;
+    flex: 1;
+  }
+  .taskTable{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: left;
+  }
+  .taskTable th{
+    color: var(--text-muted);
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--glass-border);
+    font-weight: 500;
+  }
+  .taskTable td{
+    padding: 6px;
+    border-bottom: 1px solid rgba(234,246,246,0.05);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+  .taskRow{
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .taskRow:hover{
+    background: rgba(94, 234, 212, 0.12);
+  }
+
+  /* overlays */
+  .overlay{
+    position:fixed; inset:0;
+    background: rgba(3,16,18,0.6);
+    backdrop-filter: blur(3px);
+    display:flex; align-items:center; justify-content:center;
+    z-index: 100;
+    opacity:0; pointer-events:none;
+    transition: opacity .18s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+
+  .card{
+    background: #0B3D42;
+    border: 1px solid var(--glass-border);
+    border-radius: 22px;
+    padding: 26px;
+    width: min(380px, 88vw);
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+    transform: translateY(10px) scale(0.97);
+    transition: transform .18s ease;
+    position:relative;
+  }
+  .overlay.show .card{ transform: translateY(0) scale(1); }
+
+  .card .sprite{
+    width: 140px; height: 84px;
+    margin: 0 auto 14px;
+  }
+  .card .sprite svg{ width:100%; height:100%; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.3)); }
+
+  .card .taskText{
+    font-size: 16px;
+    line-height: 1.5;
+    text-align:center;
+    color: var(--text-light);
+    margin-bottom: 6px;
+    word-break: break-word;
+  }
+  .card .meta{
+    text-align:center;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .card .actions{ display:flex; gap:10px; }
+  .btn-primary{
+    flex:1;
+    background: var(--seafoam);
+    color:#06282C;
+    font-weight:600;
+    font-size:14px;
+    padding: 12px 0;
+    border-radius: 14px;
+    transition: background .15s ease, transform .12s ease;
+  }
+  .btn-primary:hover{ background:#7BF2DE; transform: translateY(-1px); }
+
+  .btn-ghost{
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--glass-border);
+  }
+  .btn-ghost:hover{ color: var(--coral); border-color: var(--coral); }
+
+  .closeX{
+    position:absolute; top:16px; right:18px;
+    background:none; color: var(--text-muted);
+    font-size: 18px; line-height:1;
+    padding: 4px;
+  }
+  .closeX:hover{ color: var(--text-light); }
+
+  #basketPanel .card{ width: min(420px, 90vw); }
+  #basketPanel h2{
+    font-family:'Baloo 2', sans-serif;
+    font-size: 18px;
+    margin: 0 0 4px;
+    color: var(--sand);
+  }
+  #basketPanel .sub{
+    font-size:12px; color: var(--text-muted); margin-bottom: 16px;
+  }
+  .caughtList{ display:flex; flex-direction:column; gap:10px; }
+  .caughtItem{
+    display:flex; align-items:center; gap:12px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 10px 12px;
+  }
+  .caughtItem .mini{ width:38px; height:24px; flex-shrink:0; }
+  .caughtItem .mini svg{ width:100%; height:100%; }
+  .caughtItem .txt{ flex:1; font-size: 13px; color: var(--text-light); word-break: break-word; }
+  .caughtItem .txt .time{ display:block; font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .caughtEmpty{ text-align:center; color: var(--text-muted); font-size: 13px; padding: 20px 0; }
+
+  /* catch flight clone */
+  .flight{
+    position: fixed;
+    z-index: 200;
+    pointer-events: none;
+    transition: left 0.55s cubic-bezier(.4,.1,.4,1), top 0.55s cubic-bezier(.4,.1,.4,1), transform 0.55s ease, opacity 0.55s ease;
+  }
+
+  /* game HUD */
+  .brand{display:flex;align-items:left;flex-direction: column;min-width:180px}
+  .hud{display:flex;align-items:center;gap:8px}
+
+  .stat{height:38px;min-width:62px;padding:5px 10px;border:1px solid rgba(255,255,255,0.25);background:rgba(5, 32, 36, 0.45);backdrop-filter:blur(4px);border-radius:12px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr 1fr;column-gap:5px}
+  .stat span{grid-row:1/3;align-self:center}.stat b{font-size:13px}.stat small{font-size:8px;color:#d0e6e7;letter-spacing:1px}
+  .hudBtn{background:rgba(5, 32, 36, 0.5);border:1px solid rgba(255,255,255,0.25);color:var(--text-light);padding:9px 12px;border-radius:12px;font-weight:600;backdrop-filter:blur(4px)}
+  .hudBtn:hover{background:rgba(5, 32, 36, 0.75);transform:translateY(-1px)}
+
+  .progressPill{position:absolute;z-index:12;top:84px;left:50%;transform:translateX(-50%);width:min(280px,60vw);text-align:center;color:rgba(234,246,246,.72);font-size:10px;pointer-events:none}
+  .progressTrack{height:5px;background:rgba(0,0,0,.22);border-radius:99px;overflow:hidden;margin-top:6px}
+  #progressBar{height:100%;width:0;background:linear-gradient(90deg,var(--seafoam),var(--violet));border-radius:99px;transition:width .35s ease}
+  .tank-glow{position:absolute;width:55vw;height:45vh;left:22%;top:20%;background:radial-gradient(ellipse,rgba(94,234,212,.08),transparent 68%);pointer-events:none}
+  .priority-high .fish-btn{ filter: drop-shadow(-5px -6px 29px #f6cf09); }
+  .priority-urgent .fish-btn{ filter: drop-shadow(9px 0px 10px #f60909); }
+  
+  .priority-urgent{animation-delay:-.5s}
+  .priorityBadge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:700}
+  .priorityBadge.normal{background:rgba(94,234,212,.1);color:var(--seafoam)}
+  .priorityBadge.high{background:rgba(255,193,7,.12);color:#FFD166}
+  .priorityBadge.urgent{background:rgba(255,111,89,.12);color:#FF9C8E}
+  .shopCard{width:min(650px,92vw)!important}
+  .shopHeader{display:flex;justify-content:space-between;align-items:center;gap:12px}.shopHeader h2{font-family:'Baloo 2';color:var(--sand);margin:0}.shopBalance{padding:9px 12px;border-radius:12px;background:rgba(232,194,136,.1);color:var(--sand)}
+  .shopTabs{display:flex;gap:6px;margin:18px 0 14px}.shopTab{background:transparent;color:var(--text-muted);border:1px solid var(--glass-border);padding:8px 14px;border-radius:10px}.shopTab.active{color:var(--text-light);background:rgba(94,234,212,.1);border-color:rgba(94,234,212,.3)}
+  .shopGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;max-height:52vh;overflow-y:auto;padding:2px}
+  .skinCard{background:var(--glass);border:1px solid var(--glass-border);border-radius:15px;padding:12px;text-align:center;transition:.15s;position:relative}.skinCard:hover{transform:translateY(-2px);border-color:rgba(94,234,212,.35)}.skinCard.equipped{border-color:var(--seafoam);box-shadow:0 0 0 1px rgba(94,234,212,.2)}.skinPreview{height:70px}.skinPreview svg{width:100%;height:100%}.skinCard b{display:block;font-size:12px}.skinCard small{display:block;color:var(--text-muted);font-size:10px;margin:4px 0 9px}.skinAction{width:100%;padding:7px;border-radius:99px;background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.2);color:var(--text-light);font-size:11px;font-weight:600;transition:.15s ease;}.skinAction.buy-btn{background:var(--sand);color:#06282C;border:none;font-weight:700;}.skinAction.buy-btn:hover{background:#F4D19B;}.skinCard.equipped .skinAction{background:var(--seafoam);color:#06282C}
+  .skinDeleteBtn{position:absolute;top:7px;right:7px;width:22px;height:22px;border-radius:50%;background:rgba(3,16,18,.55);color:var(--text-muted);display:flex;align-items:center;justify-content:center;font-size:10px;border:1px solid var(--glass-border);transition:.15s ease;z-index:2}
+  .skinDeleteBtn:hover{background:var(--coral);color:#fff;border-color:var(--coral)}
+  
+  .seaPreview{ height:50px; border-radius:8px; margin-bottom:8px; border:1px solid var(--glass-border); }
+  
+  .customFishPanel{display:grid;grid-template-columns:1fr 1fr;gap:12px}.customPreview{grid-column:1/-1;height:100px;text-align:center;background:rgba(0,0,0,.15);border-radius:12px}.customPreview svg{height:100%;width:180px}.customFishPanel label{display:flex;flex-direction:column;gap:5px;color:var(--text-muted);font-size:11px}.customFishPanel input,.customFishPanel select{width:100%;background:var(--glass);color:var(--text-light);border:1px solid var(--glass-border);border-radius:99px;padding:9px}.customActions{grid-column:1/-1;display:flex;align-items:center;gap:10px}.customActions .btn-primary{flex:none;padding:10px 14px}
+  .customModeToggle{grid-column:1/-1;display:flex;gap:6px;background:rgba(0,0,0,.2);padding:3px;border-radius:99px}.customModeBtn{flex:1;background:transparent;color:var(--text-muted);font-size:12px;font-weight:600;padding:8px 10px;border-radius:99px;transition:.15s ease}.customModeBtn.active{background:var(--seafoam);color:#06282C}
+  .customSvgField{grid-column:1/-1;display:flex;flex-direction:column;gap:5px;color:var(--text-muted);font-size:11px}
+  #customSvgInput{width:100%;background:var(--glass);color:var(--text-light);border:1px solid var(--glass-border);border-radius:14px;padding:10px;font-family:'SFMono-Regular',Consolas,monospace;font-size:11px;line-height:1.5;resize:vertical;min-height:110px}
+  #customSvgInput:focus{outline:none;border-color:rgba(94,234,212,.55)}
+  #customSvgError{grid-column:1/-1;color:var(--coral);font-size:11px;display:none}
+  #customSvgError.show{display:block}
+  .svgHint{grid-column:1/-1;font-size:10.5px;color:var(--text-muted);line-height:1.5;background:rgba(0,0,0,.15);border-radius:10px;padding:8px 10px}
+  .svgHint code{background:rgba(0,0,0,.3);padding:1px 4px;border-radius:4px}
+  .toast{position:fixed;left:50%;bottom:30px;transform:translate(-50%,20px);z-index:500;background:#0B3D42;border:1px solid rgba(94,234,212,.35);box-shadow:0 12px 30px rgba(0,0,0,.35);padding:10px 16px;border-radius:12px;font-size:12px;opacity:0;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media(max-width:700px){
+    header{padding:10px 12px 36px 12px}.tagline{display:none!important}.brand{min-width:0}.hud{gap:5px}.stat{min-width:48px}.hudBtn{padding:8px}
+    .island-container{ left: 110px; scale: 0.8; }
+    .tankComposer{
+      top: 14px;
+      padding: 8px 10px;
+    }
+    .segLabel{display:none}.segBtn{padding:8px}
+    #addBtn span{display:none}#addBtn{padding:8px 12px}
+    .taskSubgrid{ display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-bg-decor">
+      <div class="sun"></div>
+      <div class="cloud cloud1"></div>
+      <div class="cloud cloud2"></div>
+    </div>
+
+    <div class="island-container">
+      <svg viewBox="0 0 160 60" width="100%" height="100%">
+        <path d="M 10 50 Q 80 20 150 50 Z" fill="#E8C288" />
+        <path d="M 30 46 Q 80 28 130 46 Z" fill="#2E7D32" />
+        <path d="M 65 44 Q 60 25 55 12" fill="none" stroke="#795548" stroke-width="3" stroke-linecap="round"/>
+        <path d="M 55 12 Q 40 10 32 18 M 55 12 Q 45 0 35 2 M 55 12 Q 62 -2 70 2 M 55 12 Q 70 8 75 20" fill="none" stroke="#4CAF50" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M 85 45 Q 88 28 92 16" fill="none" stroke="#795548" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M 92 16 Q 80 12 74 20 M 92 16 Q 86 4 78 5 M 92 16 Q 100 4 108 8 M 92 16 Q 104 12 108 22" fill="none" stroke="#388E3C" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="ocean-waves">
+      <div class="wave wave1"></div>
+      <div class="wave wave2"></div>
+      <div class="shore-sand"></div>
+    </div>
+
+    <div class="brand">
+      <h1><i class="fa-solid fa-fish-fins"></i> Finlist It</h1> 
+      <span class="tagline">Turn your tasks into a living aquarium.</span>
+    </div>
+
+    <div class="hud">
+      <div class="stat"><span><i class="fa-solid fa-flask"></i></span><b id="points">0</b><small>XP</small></div>
+      <div class="stat"><span><i class="fa-solid fa-trophy"></i></span><b id="level">1</b><small>LEVEL</small></div>
+      <button class="hudBtn" id="shopBtn" title="Fish Skin Shop"><i class="fa-solid fa-anchor"></i> Fish Port</button>
+      <button class="hudBtn" id="clearBtn" type="button" title="Empty the whole tank">Reset</button>
+    </div>
+  </header>
+
+  <div id="tank">
+    <!-- Task Composer -->
+    <form id="addForm" class="tankComposer">
+      <div class="composerInputRow">
+        <span class="spark">✦</span>
+        <input id="taskInput" type="text" placeholder="Add a task, watch it swim..." maxlength="140" autocomplete="off"/>
+      </div>
+      <div class="composerControlsRow">
+        <div class="prioritySeg" role="group" aria-label="Task priority">
+          <button type="button" class="segBtn active" data-value="normal" aria-pressed="true"><span class="segIcon"><i class="fa-solid fa-fish"></i></span><span class="segLabel">Normal</span></button>
+          <button type="button" class="segBtn" data-value="high" aria-pressed="false"><span class="segIcon"><i class="fa-solid fa-fire"></i></span><span class="segLabel">High</span></button>
+          <button type="button" class="segBtn" data-value="urgent" aria-pressed="false"><span class="segIcon"><i class="fa-solid fa-bolt-lightning"></i></span><span class="segLabel">Urgent</span></button>
+        </div>
+        <input type="hidden" id="priorityInput" value="normal">
+        <button id="addBtn" type="submit">Add<span>↵</span></button>
+      </div>
+    </form>
+
+    <div class="tank-glow"></div>
+
+    <div id="emptyState">
+      <div class="big">Your tank is waiting 🫧</div>
+      <div>Add a task using the box above. Your task becomes a fish.</div>
+    </div>
+
+    <div class="taskSubgrid" id="taskSubgrid">
+      <div class="taskSubgridTitle">
+        <span>📋 Tank Tasks</span>
+        <small id="subgridCount" style="color:var(--text-muted); font-size:11px;">0 active</small>
+      </div>
+      <div class="taskTableContainer">
+        <table class="taskTable">
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody id="taskTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="progressPill" id="levelProgress">
+      <span id="progressText">0 / 100 XP to next level</span>
+      <div class="progressTrack"><div id="progressBar"></div></div>
+    </div>
+  </div>
+
+  <button id="basketBtn" title="View completed tasks">
+    <svg viewBox="0 0 48 48"><path d="M6 20h36l-3.5 20a4 4 0 0 1-4 3.3H13.5a4 4 0 0 1-4-3.3L6 20z" fill="#8A5A2B"/><path d="M6 20h36l-1 5H7l-1-5z" fill="#6E441F"/><path d="M14 20l3-9h14l3 9" stroke="#6E441F" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+    <span id="basketCount">0</span>
+  </button>
+</div>
+
+<!-- shop -->
+<div class="overlay" id="shopPanel">
+  <div class="card shopCard">
+    <button class="closeX" data-close="shopPanel">✕</button>
+    <div class="shopHeader">
+      <div>
+        <h2><i class="fa-solid fa-fish"></i> Fish & Tank Boutique</h2>
+        <div class="sub">Spend XP on cosmetics. Nothing affects productivity.</div>
+      </div>
+      <div class="shopBalance"><i class="fa-solid fa-flask"></i> <b id="shopPoints">0</b></div>
+    </div>
+    <div class="shopTabs">
+      <button class="shopTab active" data-tab="skins">Skins</button>
+      <button class="shopTab" data-tab="sea">Sea Color</button>
+      <button class="shopTab customTabButton" data-tab="custom">🔒 Create Fish · Lv.10</button>
+    </div>
+    <div id="skinsTab" class="shopGrid"></div>
+    <div id="seaTab" class="shopGrid" style="display:none"></div>
+    <div id="customTab" class="customFishPanel" style="display:none">
+      <div class="customPreview" id="customPreview"></div>
+      <div class="customModeToggle">
+        <button type="button" class="customModeBtn active" id="modePresetBtn" data-mode="preset">🎨 Build from presets</button>
+        <button type="button" class="customModeBtn" id="modeSvgBtn" data-mode="svg">📋 Paste my own SVG</button>
+      </div>
+      <label>Fish name <input id="customName" maxlength="24" placeholder="My little fish"></label>
+
+      <div id="presetFields" class="customFishPanel" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0">
+        <label>Body color <input id="customColor" type="color" value="#5EEAD4"></label>
+        <label>Accent color <input id="customAccent" type="color" value="#FF6F59"></label>
+        <label style="grid-column:1/-1">Style
+          <select id="customStyle">
+            <option value="classic">Classic</option>
+            <option value="gold">Goldfish</option>
+            <option value="coral">Coral</option>
+            <option value="violet">Betta</option>
+            <option value="ocean">Ocean</option>
+            <option value="neon">Neon</option>
+            <option value="koi">Koi</option>
+            <option value="shark">Shark</option>
+            <option value="octopus">Octopus</option>
+            <option value="manta">Manta Ray</option>
+            <option value="whale">Whale</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="svgFields" class="customFishPanel" style="grid-column:1/-1;display:none;grid-template-columns:1fr;gap:10px;padding:0">
+        <div class="svgHint">Paste SVG markup for your fish. A full <code>&lt;svg&gt;...&lt;/svg&gt;</code> or just the inner shapes (<code>&lt;path&gt;</code>, <code>&lt;circle&gt;</code>, <code>&lt;ellipse&gt;</code>, etc.) both work. It's drawn on a <code>0 0 100 60</code> canvas, facing right. Scripts, event handlers, and external links are stripped automatically.</div>
+        <label class="customSvgField">SVG markup
+          <textarea id="customSvgInput" spellcheck="false" placeholder="<ellipse cx=&quot;50&quot; cy=&quot;30&quot; rx=&quot;35&quot; ry=&quot;20&quot; fill=&quot;#5EEAD4&quot;/>"></textarea>
+        </label>
+        <div id="customSvgError"></div>
+      </div>
+
+      <div class="customActions">
+        <button class="btn-primary" id="saveCustomBtn">Save Fish Design</button>
+        <span class="sub">Your saved design becomes a cosmetic skin you can equip.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- fish detail modal -->
+<div class="overlay" id="fishModal">
+  <div class="card">
+    <button class="closeX" data-close="fishModal">✕</button>
+    <div class="sprite" id="modalSprite"></div>
+    <div class="taskText" id="modalText"></div>
+    <div class="meta" id="modalMeta"></div>
+    <div class="actions">
+      <button class="btn-primary" id="modalDoneBtn">Mark done</button>
+      <button class="btn-ghost" id="modalDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- basket panel -->
+<div class="overlay" id="basketPanel">
+  <div class="card">
+    <button class="closeX" data-close="basketPanel">✕</button>
+    <h2>Caught fish</h2>
+    <div class="sub">Tasks you've finished and netted.</div>
+    <div class="caughtList" id="caughtList"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const COLORS = ['#5EEAD4', '#FF6F59', '#E8C288', '#B9A6FF', '#7FD1FF'];
+
+  let tasks = [];   
+  let caught = [];  
+  let points = 0;
+  let level = 1;
+  let ownedItems = ['classic', 'sea-default'];
+  let equippedSkin = 'classic';
+  let equippedSea = 'sea-default';
+  let customSkins = [];
+
+  const SKINS = [
+    {id:'classic', name:'Starter Guppy', cost:0, emoji:'🐟', color:'#5EEAD4', accent:'#06282C', unlockLevel:1},
+    {id:'gold', name:'Golden Fin', cost:100, emoji:'🐠', color:'#FFD166', accent:'#9A6500', unlockLevel:1},
+    {id:'coral', name:'Coral Clown', cost:180, emoji:'🐡', color:'#FF6F59', accent:'#7B2D26', unlockLevel:2},
+    {id:'violet', name:'Royal Betta', cost:300, emoji:'🪻', color:'#B9A6FF', accent:'#5C43A8', unlockLevel:3},
+    {id:'ocean', name:'Ocean Blue', cost:450, emoji:'🌊', color:'#7FD1FF', accent:'#176B87', unlockLevel:4},
+    {id:'neon', name:'Neon Tetra', cost:650, emoji:'✨', color:'#7CFFCB', accent:'#6D3AFF', unlockLevel:5},
+    {id:'koi', name:'Koi Legend', cost:900, emoji:'🎏', color:'#FF9F68', accent:'#F4F1DE', unlockLevel:7},
+    {id:'clownfish', name:'Clownfish', cost:1100, emoji:'🐠', color:'#FF8A3D', accent:'#F8F1DE', unlockLevel:8},
+    {id:'shark', name:'Great White Shark', cost:1500, emoji:'🦈', color:'#8DA7B5', accent:'#DCEAF0', unlockLevel:9},
+    {id:'octopus', name:'Royal Octopus', cost:2200, emoji:'🐙', color:'#B86BCE', accent:'#F4B7E9', unlockLevel:11},
+    {id:'manta', name:'Manta Ray', cost:3000, emoji:'🌊', color:'#526C80', accent:'#9FD5E7', unlockLevel:13},
+    {id:'whale', name:'Blue Whale', cost:4200, emoji:'🐋', color:'#4C91B8', accent:'#B8E4F2', unlockLevel:15}
+  ];
+
+  const SEA_COLORS = [
+    {id:'sea-default', name:'Deep Teal', cost:0, unlockLevel:1, top:'#0E4A52', bottom:'#062F35'},
+    {id:'sea-midnight', name:'Midnight Trench', cost:200, unlockLevel:2, top:'#0A1128', bottom:'#000411'},
+    {id:'sea-sunset', name:'Sunset Lagoon', cost:500, unlockLevel:4, top:'#3D1E6D', bottom:'#180B30'},
+    {id:'sea-emerald', name:'Emerald Reef', cost:800, unlockLevel:6, top:'#0B4F3A', bottom:'#04261C'},
+    {id:'sea-abyssal', name:'Abyssal Violet', cost:1200, unlockLevel:8, top:'#2A0845', bottom:'#120024'},
+    {id:'sea-golden', name:'Golden Shimmer', cost:2000, unlockLevel:10, top:'#6B4D00', bottom:'#332400'}
+  ];
+
+  const PRIORITY = {
+    normal: {label:'Normal', points:10, className:'normal'},
+    high: {label:'High', points:20, className:'high'},
+    urgent: {label:'Urgent', points:35, className:'urgent'}
+  };
+
+  const tankEl = document.getElementById('tank');
+  const emptyStateEl = document.getElementById('emptyState');
+  const basketCountEl = document.getElementById('basketCount');
+  const basketBtn = document.getElementById('basketBtn');
+
+  function uid(){ return 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function fishSVG(color, accent = '#06282C', skin = 'classic'){
+    const shapes = {
+      classic: `<polygon points="22,30 -6,10 -6,50" fill="${color}"/>
+        <ellipse cx="58" cy="30" rx="34" ry="19" fill="${color}"/>
+        <path d="M55 12 C62 2 72 2 74 10 C68 12 60 13 55 12Z" fill="${accent}"/>`,
+      gold: `<polygon points="24,30 -4,8 -4,52" fill="${color}"/>
+        <ellipse cx="58" cy="30" rx="35" ry="20" fill="${color}"/>
+        <path d="M53 12 Q63 -2 75 10 Q65 17 53 12Z" fill="${accent}"/>
+        <path d="M50 45 Q63 54 75 43" fill="none" stroke="${accent}" stroke-width="4"/>`,
+      coral: `<polygon points="24,30 -5,7 -5,53" fill="${color}"/>
+        <ellipse cx="58" cy="30" rx="35" ry="20" fill="${color}"/>
+        <path d="M46 12 Q56 3 67 11 L61 48 Q51 53 46 44Z" fill="${accent}" opacity=".8"/>`,
+      violet: `<polygon points="25,30 -5,3 -1,55" fill="${color}"/>
+        <ellipse cx="58" cy="30" rx="35" ry="18" fill="${color}"/>
+        <path d="M50 15 Q58 -4 72 8 L64 17Z" fill="${accent}"/>
+        <path d="M52 45 Q65 57 76 43" fill="${accent}" opacity=".8"/>`,
+      ocean: `<polygon points="24,30 -8,12 -4,50" fill="${color}"/>
+        <ellipse cx="58" cy="30" rx="35" ry="19" fill="${color}"/>
+        <path d="M50 14 Q62 0 76 10 L66 19Z" fill="${accent}"/>
+        <path d="M45 29 Q58 22 69 30 Q58 38 45 29Z" fill="${accent}" opacity=".65"/>`,
+      neon: `<polygon points="23,30 -8,9 -8,51" fill="${color}"/>
+        <ellipse cx="58" cy="30" rx="35" ry="19" fill="${color}"/>
+        <path d="M48 12 Q60 0 74 10 L66 17Z" fill="${accent}"/>
+        <rect x="34" y="24" width="43" height="8" rx="4" fill="${accent}" opacity=".9"/>`,
+      koi: `<polygon points="23,30 -6,7 -5,53" fill="${color}"/>
+        <ellipse cx="58" cy="30" rx="35" ry="20" fill="${color}"/>
+        <path d="M48 12 Q60 0 75 10 L66 18Z" fill="${accent}"/>
+        <path d="M46 20 Q55 14 63 20 Q55 28 46 20Z M61 38 Q69 31 77 37 Q69 45 61 38Z" fill="${accent}"/>`,
+      clownfish: `<path d="M17 34 Q29 10 59 11 Q82 12 93 30 Q83 46 59 48 Q29 50 17 34Z" fill="${color}"/>
+        <path d="M37 12 Q44 29 37 48 M62 12 Q69 29 62 48" fill="none" stroke="${accent}" stroke-width="7"/>
+        <path d="M18 34 L2 20 L6 34 L2 47Z" fill="${color}"/>`,
+      shark: `<path d="M2 32 Q22 4 60 4 Q84 4 100 20 L82 25 Q92 31 100 38 Q78 50 50 48 Q24 46 2 32Z" fill="${color}"/>
+        <path d="M50 10 L62 -8 L71 11Z" fill="${color}"/>
+        <path d="M71 44 L80 58 L85 41Z" fill="${color}"/>
+        <path d="M2 32 L-8 20 L-3 38Z" fill="${color}"/>
+        <path d="M82 27 L93 28" stroke="${accent}" stroke-width="2.5"/>`,
+      manta: `<path d="M4 34 Q21 12 44 16 Q55 5 67 16 Q85 12 97 34 Q81 30 69 35 Q59 42 51 52 Q43 42 32 35 Q19 30 4 34Z" fill="${color}"/>
+        <path d="M48 19 Q51 9 54 19" fill="none" stroke="${accent}" stroke-width="3"/>`,
+      whale: `<path d="M2 33 Q20 3 60 5 Q88 6 100 27 Q88 47 60 50 Q26 52 2 33Z" fill="${color}"/>
+        <path d="M22 13 Q33 -6 45 13" fill="${color}"/>
+        <path d="M72 42 Q83 56 94 41" fill="${accent}" opacity=".7"/>
+        <path d="M7 28 L-6 17 L-1 34 L-6 44Z" fill="${color}"/>`,
+      octopus: `<ellipse cx="50" cy="18" rx="28" ry="20" fill="${color}"/>
+        <circle cx="40" cy="17" r="3.6" fill="#fff"/><circle cx="41" cy="17" r="1.8" fill="#35203D"/>
+        <circle cx="60" cy="17" r="3.6" fill="#fff"/><circle cx="61" cy="17" r="1.8" fill="#35203D"/>
+        <path d="M24 31 Q13 43 20 56 M35 34 Q27 48 35 60 M48 35 Q46 50 52 61 M61 34 Q67 49 61 60 M73 31 Q85 43 78 56 M83 29 Q97 37 92 51" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"/>`
+    };
+
+    const custom = customSkins.find(x => x.id === skin);
+    if(custom){
+      if(custom.svgMarkup){
+        // Pasted SVG designs come with their own art (eyes included, if any) —
+        // don't overlay the default eye on top of a fully custom design.
+        return `<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">${custom.svgMarkup}</svg>`;
+      }
+      return `<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+        ${shapes[custom.style] || shapes.classic}
+        <circle cx="82" cy="25" r="3.4" fill="#06282C"/>
+        <circle cx="83" cy="24" r="1.2" fill="#fff"/>
+      </svg>`;
+    }
+
+    const body = shapes[skin] || shapes.classic;
+    const hideDefaultEye = ['octopus', 'shark', 'whale'].includes(skin);
+
+    return `<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+      ${body}
+      ${hideDefaultEye ? '' : `<circle cx="82" cy="25" r="3.4" fill="#06282C"/><circle cx="83" cy="24" r="1.2" fill="#fff"/>`}
+      ${skin === 'shark' ? `<circle cx="86" cy="18" r="3" fill="#06282C"/><circle cx="87" cy="17" r="1" fill="#fff"/>` : ''}
+      ${skin === 'whale' ? `<circle cx="84" cy="22" r="3.2" fill="#06282C"/><circle cx="85" cy="21" r="1" fill="#fff"/>` : ''}
+    </svg>`;
+  }
+
+  // Allow-list based SVG sanitizer for user-pasted fish designs. Strips any
+  // element or attribute that isn't plain drawing markup, so pasted SVG can't
+  // run scripts, load external resources, or otherwise break out of the tank.
+  const SVG_ALLOWED_TAGS = new Set([
+    'svg','g','path','circle','ellipse','rect','polygon','polyline','line',
+    'defs','lineargradient','radialgradient','stop','text','tspan','use','image'
+  ]);
+  const SVG_ALLOWED_ATTRS = new Set([
+    'd','cx','cy','r','rx','ry','x','y','x1','y1','x2','y2','width','height',
+    'points','fill','stroke','stroke-width','stroke-linecap','stroke-linejoin',
+    'stroke-dasharray','opacity','fill-opacity','stroke-opacity','transform',
+    'viewbox','offset','stop-color','stop-opacity','gradientunits','id',
+    'font-size','font-family','text-anchor','clip-rule','fill-rule'
+  ]);
+  // href/xlink:href are handled separately from the plain attribute allow-list
+  // above, since only two shapes of URL are ever safe to keep:
+  //  - <use href="#someId">  → an internal reference within the same fragment
+  //  - <image href="data:image/png;base64,...">  → a self-contained raster
+  //    image with no network request. SVG data-URIs are excluded because an
+  //    embedded <svg> can itself carry a <script>.
+  function isSafeHrefValue(tag, val){
+    if(tag === 'use') return val.startsWith('#');
+    if(tag === 'image') return /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(val);
+    return false;
+  }
+
+  function sanitizeSvgFragment(input){
+    if(!input || !input.trim()) return { ok:false, error:'Paste some SVG markup first.' };
+    let source = input.trim();
+    // Accept either a full <svg>…</svg> or a bare fragment of shape elements.
+    // If it's a full <svg> with its own viewBox, remember that viewBox so we
+    // can scale/center the design onto our 100x60 fish canvas afterward.
+    let sourceViewBox = null;
+    const fullSvgMatch = source.match(/<svg([^>]*)>([\s\S]*)<\/svg>/i);
+    if(fullSvgMatch){
+      const vbMatch = fullSvgMatch[1].match(/viewBox\s*=\s*["']([^"']+)["']/i);
+      if(vbMatch) sourceViewBox = vbMatch[1].trim().split(/[\s,]+/).map(Number);
+      source = fullSvgMatch[2];
+    }
+
+    let doc;
+    try{
+      doc = new DOMParser().parseFromString(
+        `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${source}</svg>`,
+        'image/svg+xml'
+      );
+    }catch(e){
+      return { ok:false, error:'That SVG could not be parsed.' };
+    }
+    if(doc.querySelector('parsererror')){
+      return { ok:false, error:'That SVG has a markup error — check for unclosed tags.' };
+    }
+
+    const root = doc.documentElement;
+    let strippedSomething = false;
+
+    function clean(el){
+      [...el.children].forEach(child => {
+        const tag = child.tagName.toLowerCase();
+        if(!SVG_ALLOWED_TAGS.has(tag)){
+          strippedSomething = true;
+          child.remove();
+          return;
+        }
+        [...child.attributes].forEach(attr => {
+          const name = attr.name.toLowerCase();
+          const rawVal = attr.value.trim();
+          const isHrefAttr = name === 'href' || name === 'xlink:href';
+          let allowed;
+          if(isHrefAttr){
+            allowed = isSafeHrefValue(tag, rawVal);
+          }else{
+            const isEventHandler = name.startsWith('on');
+            const isUnsafeUrl = /^(javascript|data):/i.test(rawVal);
+            allowed = SVG_ALLOWED_ATTRS.has(name) && !isEventHandler && !isUnsafeUrl;
+          }
+          if(!allowed){
+            strippedSomething = true;
+            child.removeAttribute(attr.name);
+          }
+        });
+        clean(child);
+      });
+    }
+    clean(root);
+
+    let inner = root.innerHTML.trim();
+    if(!inner){
+      return { ok:false, error:'No drawable shapes found in that markup.' };
+    }
+
+    // If the pasted design had its own viewBox, fit it into our 100x60 fish
+    // canvas (uniform scale, centered) instead of drawing it at native
+    // coordinates, which would otherwise appear tiny/cropped in a corner.
+    if(sourceViewBox && sourceViewBox.length === 4 && sourceViewBox.every(n => !Number.isNaN(n))){
+      const [minX, minY, w, h] = sourceViewBox;
+      if(w > 0 && h > 0){
+        const scale = Math.min(100 / w, 60 / h);
+        const tx = (100 - w * scale) / 2 - minX * scale;
+        const ty = (60 - h * scale) / 2 - minY * scale;
+        inner = `<g transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${scale.toFixed(4)})">${inner}</g>`;
+      }
+    }
+
+    return { ok:true, markup: inner, strippedSomething };
+  }
+
+  const STORAGE_KEY = 'shoal-data';
+  // window.storage only exists when this page runs as a Claude.ai artifact.
+  // When opened as a normal local/hosted HTML file, fall back to localStorage
+  // so tasks actually persist across browser sessions.
+  const hasArtifactStorage = () =>
+    typeof window.storage !== 'undefined' &&
+    typeof window.storage.set === 'function' &&
+    typeof window.storage.get === 'function';
+
+  async function persistWrite(payloadStr){
+    if(hasArtifactStorage()){
+      try{
+        await window.storage.set(STORAGE_KEY, payloadStr, false);
+        return;
+      }catch(e){
+        console.warn('artifact storage write failed, falling back to localStorage', e);
+      }
+    }
+    try{
+      localStorage.setItem(STORAGE_KEY, payloadStr);
+    }catch(e){
+      console.error('localStorage write failed', e);
+    }
+  }
+
+  async function persistRead(){
+    if(hasArtifactStorage()){
+      try{
+        const res = await window.storage.get(STORAGE_KEY, false);
+        if(res && res.value) return res.value;
+      }catch(e){
+        console.warn('artifact storage read failed, falling back to localStorage', e);
+      }
+    }
+    try{
+      return localStorage.getItem(STORAGE_KEY);
+    }catch(e){
+      console.error('localStorage read failed', e);
+      return null;
+    }
+  }
+
+  async function saveState(){
+    try{
+      const payloadStr = JSON.stringify({
+        tasks, caught, points, level, ownedItems, equippedSkin, equippedSea, customSkins
+      });
+      await persistWrite(payloadStr);
+    }catch(e){ console.error('save failed', e); }
+  }
+
+  async function loadState(){
+    try{
+      const raw = await persistRead();
+      if(raw){
+        const parsed = JSON.parse(raw);
+        tasks = parsed.tasks || [];
+        caught = parsed.caught || [];
+        points = parsed.points || 0;
+        level = parsed.level || 1;
+        ownedItems = parsed.ownedItems || parsed.unlocked || ['classic', 'sea-default'];
+        equippedSkin = parsed.equippedSkin || 'classic';
+        equippedSea = parsed.equippedSea || 'sea-default';
+        customSkins = parsed.customSkins || [];
+      }
+    }catch(e){
+      console.error('load failed', e);
+      tasks = []; caught = []; points = 0; level = 1; ownedItems = ['classic', 'sea-default']; equippedSkin = 'classic'; equippedSea = 'sea-default'; customSkins = [];
+    }
+    tasks.forEach(renderFish);
+    applySeaColor();
+    updateSubgrid();
+    updateEmptyState();
+    updateBasketCount();
+    updateProgress();
+  }
+
+  function applySeaColor(){
+    const sea = SEA_COLORS.find(s => s.id === equippedSea) || SEA_COLORS[0];
+    tankEl.style.background = `linear-gradient(180deg, ${sea.top} 0%, ${sea.bottom} 100%)`;
+  }
+
+  function updateEmptyState(){
+    emptyStateEl.style.display = tasks.length === 0 ? 'flex' : 'none';
+  }
+  function updateBasketCount(){
+    basketCountEl.textContent = caught.length;
+  }
+
+  function updateSubgrid(){
+    const tbody = document.getElementById('taskTableBody');
+    const countEl = document.getElementById('subgridCount');
+    tbody.innerHTML = '';
+    countEl.textContent = `${tasks.length} active`;
+
+    if(tasks.length === 0){
+      tbody.innerHTML = `<tr><td colspan="2" style="color:var(--text-muted); text-align:center;">No tasks</td></tr>`;
+      return;
+    }
+
+    tasks.forEach(t => {
+      const row = document.createElement('tr');
+      row.className = 'taskRow';
+      const p = PRIORITY[t.priority || 'normal'];
+      row.innerHTML = `<td>${escapeHTML(t.text)}</td><td><span class="priorityBadge ${p.className}">${p.label}</span></td>`;
+      row.addEventListener('click', () => openFishModal(t.id));
+      tbody.appendChild(row);
+    });
+  }
+
+  function getSkin(id){
+    return SKINS.find(s => s.id === id) || customSkins.find(s => s.id === id) || SKINS[0];
+  }
+
+  function xpForNextLevel(){
+    return 100 + (level - 1) * 75;
+  }
+
+  function updateProgress(){
+    const base = level === 1 ? 0 : 100 + Array.from({length:level-2}, (_,i)=>100+i*75).reduce((a,b)=>a+b,0);
+    const needed = xpForNextLevel();
+    const current = Math.max(0, points - base);
+    const pct = Math.min(100, (current / needed) * 100);
+    document.getElementById('points').textContent = points;
+    document.getElementById('level').textContent = level;
+    document.getElementById('shopPoints').textContent = points;
+    document.getElementById('progressText').textContent = `${Math.round(current)} / ${needed} XP to next level`;
+    document.getElementById('progressBar').style.width = pct + '%';
+  }
+
+  function checkLevelUp(){
+    let changed = false;
+    while(points >= 100 + Array.from({length:level-1}, (_,i)=>100+i*75).reduce((a,b)=>a+b,0)){
+      level++;
+      changed = true;
+    }
+    if(changed){
+      showToast(`🎉 Level ${level}! New shop items available for purchase!`);
+    }
+  }
+
+  function awardPoints(fish){
+    const reward = PRIORITY[fish.priority || 'normal'].points;
+    points += reward;
+    checkLevelUp();
+    updateProgress();
+    saveState();
+    showToast(`+${reward} XP ${PRIORITY[fish.priority || 'normal'].label} task completed!`);
+  }
+
+  function showToast(message){
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = message;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 220); }, 1800);
+  }
+
+  function renderFish(fish){
+    const wrap = document.createElement('div');
+    wrap.className = 'fish-wrap';
+    wrap.id = 'fish-' + fish.id;
+    wrap.style.setProperty('--lane', fish.lane + '%');
+    wrap.style.setProperty('--duration', fish.duration + 's');
+    wrap.style.setProperty('--sdelay', '-' + fish.delay + 's');
+    wrap.style.setProperty('--swimname', fish.dir === 'rtl' ? 'swim-rtl' : 'swim-ltr');
+
+    const bob = document.createElement('div');
+    bob.className = 'fish-bob' + (fish.dir === 'ltr' ? ' fish-flip' : '');
+    bob.style.setProperty('--bobdur', fish.bobdur + 's');
+
+    const btn = document.createElement('button');
+    btn.className = 'fish-btn';
+    const skin = getSkin(fish.skinId || equippedSkin);
+    btn.innerHTML = fishSVG(skin.color, skin.accent, fish.skinId || equippedSkin);
+    btn.dataset.priority = fish.priority || 'normal';
+    wrap.classList.add('priority-' + (fish.priority || 'normal'));
+    btn.title = `${PRIORITY[fish.priority || 'normal'].label} task: ${fish.text}`;
+    btn.addEventListener('click', () => openFishModal(fish.id));
+
+    bob.appendChild(btn);
+    wrap.appendChild(bob);
+    tankEl.appendChild(wrap);
+  }
+
+  function addTask(text){
+    const fish = {
+      id: uid(),
+      text: text,
+      createdAt: Date.now(),
+      color: getSkin(equippedSkin).color || COLORS[Math.floor(Math.random()*COLORS.length)],
+      skinId: equippedSkin,
+      priority: document.getElementById('priorityInput').value,
+      lane: (8 + Math.random() * 72).toFixed(1),
+      duration: (14 + Math.random() * 10).toFixed(1),
+      delay: (Math.random() * 20).toFixed(1),
+      dir: Math.random() < 0.5 ? 'ltr' : 'rtl',
+      bobdur: (2 + Math.random() * 2).toFixed(1)
+    };
+    tasks.push(fish);
+    renderFish(fish);
+    updateSubgrid();
+    updateEmptyState();
+    saveState();
+  }
+
+  function findTask(id){ return tasks.find(t => t.id === id); }
+
+  let activeFishId = null;
+
+  function openFishModal(id){
+    const fish = findTask(id);
+    if(!fish) return;
+    activeFishId = id;
+    const skin = getSkin(fish.skinId || equippedSkin);
+    document.getElementById('modalSprite').innerHTML = fishSVG(skin.color, skin.accent, fish.skinId || equippedSkin);
+    document.getElementById('modalText').textContent = fish.text;
+    const mins = Math.max(1, Math.round((Date.now() - fish.createdAt) / 60000));
+    const p = PRIORITY[fish.priority || 'normal'];
+    document.getElementById('modalMeta').innerHTML =
+      `<span class="priorityBadge ${p.className}">${p.label} · +${p.points} XP</span>
+       &nbsp; Swimming for ${mins < 60 ? mins + ' min' : Math.round(mins/60) + ' hr'}`;
+    showOverlay('fishModal');
+  }
+
+  function showOverlay(id){ document.getElementById(id).classList.add('show'); }
+  function hideOverlay(id){ document.getElementById(id).classList.remove('show'); }
+
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => hideOverlay(btn.getAttribute('data-close')));
+  });
+  document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', (e) => { if(e.target === ov) ov.classList.remove('show'); });
+  });
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape'){
+      document.querySelectorAll('.overlay.show').forEach(ov => ov.classList.remove('show'));
+    }
+  });
+
+  function markDone(){
+    const id = activeFishId;
+    const fish = findTask(id);
+    if(!fish) return;
+    hideOverlay('fishModal');
+    flyToBasket(id, fish);
+  }
+
+  function flyToBasket(id, fish){
+    const el = document.getElementById('fish-' + id);
+    if(!el){ finishCatch(id, fish); return; }
+    const rect = el.getBoundingClientRect();
+    const basketRect = basketBtn.getBoundingClientRect();
+
+    el.remove();
+
+    const clone = document.createElement('div');
+    clone.className = 'flight';
+    clone.style.left = rect.left + 'px';
+    clone.style.top = rect.top + 'px';
+    clone.style.width = rect.width + 'px';
+    clone.style.height = rect.height + 'px';
+    clone.innerHTML = fishSVG(fish.color);
+    document.body.appendChild(clone);
+
+    requestAnimationFrame(() => {
+      clone.style.left = (basketRect.left + basketRect.width/2 - 14) + 'px';
+      clone.style.top = (basketRect.top + basketRect.height/2 - 10) + 'px';
+      clone.style.transform = 'scale(0.25)';
+      clone.style.opacity = '0';
+    });
+
+    setTimeout(() => {
+      clone.remove();
+      finishCatch(id, fish);
+      basketBtn.classList.add('bump');
+      setTimeout(() => basketBtn.classList.remove('bump'), 350);
+    }, 560);
+  }
+
+  function finishCatch(id, fish){
+    tasks = tasks.filter(t => t.id !== id);
+    caught.unshift({ id: fish.id, text: fish.text, color: fish.color, skinId: fish.skinId || equippedSkin, priority: fish.priority || 'normal', doneAt: Date.now() });
+    awardPoints(fish);
+    updateSubgrid();
+    updateEmptyState();
+    updateBasketCount();
+    saveState();
+  }
+
+  function deleteActive(){
+    const id = activeFishId;
+    const el = document.getElementById('fish-' + id);
+    if(el){
+      el.style.transition = 'opacity .2s ease, transform .2s ease';
+      el.style.opacity = '0';
+      el.style.transform += ' scale(0.6)';
+      setTimeout(() => el.remove(), 200);
+    }
+    tasks = tasks.filter(t => t.id !== id);
+    updateSubgrid();
+    updateEmptyState();
+    saveState();
+    hideOverlay('fishModal');
+  }
+
+  function renderCaughtList(){
+    const listEl = document.getElementById('caughtList');
+    listEl.innerHTML = '';
+    if(caught.length === 0){
+      listEl.innerHTML = '<div class="caughtEmpty">Nothing caught yet — finish a task to net your first fish.</div>';
+      return;
+    }
+    caught.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'caughtItem';
+      const when = new Date(c.doneAt);
+      const timeStr = when.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ' · ' + when.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'});
+      const skin = getSkin(c.skinId || equippedSkin);
+      const p = PRIORITY[c.priority || 'normal'];
+      item.innerHTML = `<div class="mini">${fishSVG(skin.color, skin.accent, c.skinId || equippedSkin)}</div><div class="txt">${escapeHTML(c.text)}<span class="time">${p.label} · ${timeStr}</span></div>`;
+      listEl.appendChild(item);
+    });
+  }
+
+  function escapeHTML(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function spawnBubbles(){
+    for(let i=0;i<14;i++){
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      const size = 4 + Math.random()*10;
+      b.style.setProperty('--size', size + 'px');
+      b.style.left = (Math.random()*100) + '%';
+      b.style.setProperty('--dur', (6 + Math.random()*10) + 's');
+      b.style.setProperty('--delay', (-Math.random()*16) + 's');
+      tankEl.appendChild(b);
+    }
+  }
+
+  function renderShop(){
+    const grid = document.getElementById('skinsTab');
+    grid.innerHTML = '';
+    [...SKINS, ...customSkins].forEach(s => {
+      const isOwned = ownedItems.includes(s.id) || customSkins.some(x => x.id === s.id);
+      const isLevelLocked = s.unlockLevel && level < s.unlockLevel;
+      const isEquipped = equippedSkin === s.id;
+      const isCustom = customSkins.some(x => x.id === s.id);
+
+      let btnLabel = 'Equip';
+      let btnClass = 'skinAction';
+
+      if(isEquipped){
+        btnLabel = 'Equipped';
+      } else if(isLevelLocked){
+        btnLabel = `🔒 Lv. ${s.unlockLevel}`;
+      } else if(!isOwned){
+        btnLabel = `Buy <i class="fa-solid fa-flask"></i> ${s.cost}`;
+        btnClass += ' buy-btn';
+      }
+
+      const card = document.createElement('div');
+      card.className = 'skinCard' + (isEquipped ? ' equipped' : '');
+      card.innerHTML = `${isCustom ? `<button type="button" class="skinDeleteBtn" title="Delete this custom fish"><i class="fa-solid fa-trash"></i></button>` : ''}
+        <div class="skinPreview">${fishSVG(s.color, s.accent, s.id)}</div>
+        <b>${escapeHTML(s.name)}</b>
+        <small>${isLevelLocked ? 'Unlocked at Level ' + s.unlockLevel : isOwned ? 'Owned' : '<i class="fa-solid fa-flask"></i> ' + s.cost + ' XP'}</small>
+        <button class="${btnClass}">${btnLabel}</button>`;
+
+      if(isCustom){
+        const delBtn = card.querySelector('.skinDeleteBtn');
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if(!confirm(`Delete "${s.name}"? This can't be undone.`)) return;
+          customSkins = customSkins.filter(x => x.id !== s.id);
+          ownedItems = ownedItems.filter(id => id !== s.id);
+          if(equippedSkin === s.id) equippedSkin = 'classic';
+          saveState();
+          renderShop();
+          updateProgress();
+          showToast(`🗑️ Deleted ${s.name}.`);
+        });
+      }
+
+      const btn = card.querySelector('.skinAction');
+      btn.addEventListener('click', () => {
+        if(isLevelLocked){ 
+          showToast(`Reach level ${s.unlockLevel} to unlock this fish in the shop.`); 
+          return; 
+        }
+
+        if(!isOwned){
+          if(points < s.cost){ 
+            showToast(`You need ${s.cost - points} more XP to buy this.`); 
+            return; 
+          }
+          points -= s.cost;
+          ownedItems.push(s.id);
+          saveState();
+          showToast(`Purchased ${s.name}! You can now equip it.`);
+          renderShop();
+          updateProgress();
+          return;
+        }
+
+        equippedSkin = s.id;
+        updateProgress();
+        saveState();
+        renderShop();
+      });
+      grid.appendChild(card);
+    });
+
+    const seaGrid = document.getElementById('seaTab');
+    seaGrid.innerHTML = '';
+    SEA_COLORS.forEach(s => {
+      const isOwned = ownedItems.includes(s.id);
+      const isLevelLocked = s.unlockLevel && level < s.unlockLevel;
+      const isEquipped = equippedSea === s.id;
+
+      let btnLabel = 'Equip';
+      let btnClass = 'skinAction';
+
+      if(isEquipped){
+        btnLabel = 'Equipped';
+      } else if(isLevelLocked){
+        btnLabel = `🔒 Lv. ${s.unlockLevel}`;
+      } else if(!isOwned){
+        btnLabel = `Buy <i class="fa-solid fa-flask"></i> ${s.cost}`;
+        btnClass += ' buy-btn';
+      }
+
+      const card = document.createElement('div');
+      card.className = 'skinCard' + (isEquipped ? ' equipped' : '');
+      card.innerHTML = `<div class="seaPreview" style="background: linear-gradient(180deg, ${s.top}, ${s.bottom})"></div>
+        <b>${escapeHTML(s.name)}</b>
+        <small>${isLevelLocked ? 'Unlocked at Level ' + s.unlockLevel : isOwned ? 'Owned' : '<i class="fa-solid fa-flask"></i> ' + s.cost + ' XP'}</small>
+        <button class="${btnClass}">${btnLabel}</button>`;
+
+      const btn = card.querySelector('.skinAction');
+      btn.addEventListener('click', () => {
+        if(isLevelLocked){ 
+          showToast(`Reach level ${s.unlockLevel} to unlock this color.`); 
+          return; 
+        }
+
+        if(!isOwned){
+          if(points < s.cost){ 
+            showToast(`You need ${s.cost - points} more XP to buy this.`); 
+            return; 
+          }
+          points -= s.cost;
+          ownedItems.push(s.id);
+          saveState();
+          showToast(`Purchased ${s.name} theme! You can now equip it.`);
+          renderShop();
+          updateProgress();
+          return;
+        }
+
+        equippedSea = s.id;
+        applySeaColor();
+        updateProgress();
+        saveState();
+        renderShop();
+      });
+      seaGrid.appendChild(card);
+    });
+
+    updateCustomPreview();
+  }
+
+  function openShop(){
+    document.querySelectorAll('.shopTab').forEach(x => x.classList.remove('active'));
+    document.querySelector('.shopTab[data-tab="skins"]').classList.add('active');
+    document.getElementById('skinsTab').style.display = 'grid';
+    document.getElementById('seaTab').style.display = 'none';
+    document.getElementById('customTab').style.display = 'none';
+    document.querySelector('.customTabButton').textContent = level >= 10 ? '🎨 Create Fish' : '🔒 Create Fish · Lv.10';
+    renderShop();
+    document.getElementById('shopPanel').classList.add('show');
+  }
+
+  document.getElementById('shopBtn').addEventListener('click', openShop);
+  document.querySelectorAll('.shopTab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = tab.dataset.tab;
+      if(targetTab === 'custom' && level < 10){
+        showToast(`🔒 Create Fish unlocks at Level 10. You're Level ${level}.`);
+        return;
+      }
+      document.querySelectorAll('.shopTab').forEach(x => x.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('skinsTab').style.display = targetTab === 'skins' ? 'grid' : 'none';
+      document.getElementById('seaTab').style.display = targetTab === 'sea' ? 'grid' : 'none';
+      document.getElementById('customTab').style.display = targetTab === 'custom' ? 'block' : 'none';
+    });
+  });
+
+  let customFishMode = 'preset'; // 'preset' | 'svg'
+
+  function setCustomFishMode(mode){
+    customFishMode = mode;
+    document.getElementById('modePresetBtn').classList.toggle('active', mode === 'preset');
+    document.getElementById('modeSvgBtn').classList.toggle('active', mode === 'svg');
+    document.getElementById('presetFields').style.display = mode === 'preset' ? 'grid' : 'none';
+    document.getElementById('svgFields').style.display = mode === 'svg' ? 'grid' : 'none';
+    updateCustomPreview();
+  }
+  document.getElementById('modePresetBtn').addEventListener('click', () => setCustomFishMode('preset'));
+  document.getElementById('modeSvgBtn').addEventListener('click', () => setCustomFishMode('svg'));
+
+  function updateCustomPreview(){
+    const previewEl = document.getElementById('customPreview');
+    const errEl = document.getElementById('customSvgError');
+    if(customFishMode === 'svg'){
+      const raw = document.getElementById('customSvgInput').value;
+      if(!raw.trim()){
+        errEl.classList.remove('show');
+        previewEl.innerHTML = '<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg"></svg>';
+        return;
+      }
+      const result = sanitizeSvgFragment(raw);
+      if(!result.ok){
+        errEl.textContent = result.error;
+        errEl.classList.add('show');
+        return;
+      }
+      errEl.classList.toggle('show', !!result.strippedSomething);
+      if(result.strippedSomething) errEl.textContent = 'Some tags or attributes were removed for safety (scripts, event handlers, or external links).';
+      previewEl.innerHTML = `<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">${result.markup}</svg>`;
+    }else{
+      errEl.classList.remove('show');
+      previewEl.innerHTML = fishSVG(
+        document.getElementById('customColor').value,
+        document.getElementById('customAccent').value,
+        document.getElementById('customStyle').value
+      );
+    }
+  }
+  ['customColor','customAccent','customStyle'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateCustomPreview);
+    document.getElementById(id).addEventListener('change', updateCustomPreview);
+  });
+  document.getElementById('customSvgInput').addEventListener('input', updateCustomPreview);
+
+  document.getElementById('saveCustomBtn').addEventListener('click', () => {
+    const name = document.getElementById('customName').value.trim() || 'My Custom Fish';
+    const id = 'custom-' + Date.now().toString(36);
+    let custom;
+
+    if(customFishMode === 'svg'){
+      const raw = document.getElementById('customSvgInput').value;
+      const result = sanitizeSvgFragment(raw);
+      if(!result.ok){
+        showToast(`⚠️ ${result.error}`);
+        const errEl = document.getElementById('customSvgError');
+        errEl.textContent = result.error;
+        errEl.classList.add('show');
+        return;
+      }
+      custom = { id, name, cost: 0, svgMarkup: result.markup };
+    }else{
+      custom = {
+        id, name,
+        cost: 0,
+        color: document.getElementById('customColor').value,
+        accent: document.getElementById('customAccent').value,
+        style: document.getElementById('customStyle').value
+      };
+    }
+
+    customSkins.push(custom);
+    ownedItems.push(id);
+    equippedSkin = id;
+    saveState();
+    renderShop();
+    showToast(`🎨 ${name} saved and equipped!`);
+  });
+
+  document.querySelectorAll('.segBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.segBtn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed','true');
+      document.getElementById('priorityInput').value = btn.dataset.value;
+    });
+  });
+
+  document.getElementById('addForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = document.getElementById('taskInput');
+    const val = input.value.trim();
+    if(!val) return;
+    addTask(val);
+    input.value = '';
+    input.focus();
+  });
+
+  document.getElementById('modalDoneBtn').addEventListener('click', markDone);
+  document.getElementById('modalDeleteBtn').addEventListener('click', deleteActive);
+
+  basketBtn.addEventListener('click', () => {
+    renderCaughtList();
+    showOverlay('basketPanel');
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if(tasks.length === 0 && caught.length === 0) return;
+    if(!confirm('Clear all tasks and your catch history? This can\'t be undone.')) return;
+    tasks.forEach(t => {
+      const el = document.getElementById('fish-' + t.id);
+      if(el) el.remove();
+    });
+    tasks = [];
+    caught = [];
+    updateSubgrid();
+    updateEmptyState();
+    updateBasketCount();
+    saveState();
+  });
+
+  spawnBubbles();
+  loadState();
+  updateProgress();
+})();
+</script>
+</body>
+</html>
