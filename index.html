@@ -572,6 +572,13 @@
   .stat span{grid-row:1/3;align-self:center}.stat b{font-size:13px}.stat small{font-size:8px;color:#d0e6e7;letter-spacing:1px}
   .hudBtn{background:rgba(5, 32, 36, 0.5);border:1px solid rgba(255,255,255,0.25);color:var(--text-light);padding:9px 12px;border-radius:12px;font-weight:600;backdrop-filter:blur(4px)}
   .hudBtn:hover{background:rgba(5, 32, 36, 0.75);transform:translateY(-1px)}
+  .authBtn{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.92);color:#3c4043}
+  .authBtn:hover{background:#fff}
+  .userChip{display:flex;align-items:center;gap:7px;background:rgba(5, 32, 36, 0.5);border:1px solid rgba(255,255,255,0.25);padding:5px 6px 5px 5px;border-radius:999px;backdrop-filter:blur(4px)}
+  .userAvatar{width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--glass)}
+  .userNameLabel{font-size:12px;font-weight:600;color:var(--text-light);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .signOutBtn{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.1);color:var(--text-muted);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+  .signOutBtn:hover{background:var(--coral);color:#fff}
 
   .progressPill{position:absolute;z-index:12;top:84px;left:50%;transform:translateX(-50%);width:min(280px,60vw);text-align:center;color:rgba(234,246,246,.72);font-size:10px;pointer-events:none}
   .progressTrack{height:5px;background:rgba(0,0,0,.22);border-radius:99px;overflow:hidden;margin-top:6px}
@@ -609,6 +616,8 @@
   @media(max-width:700px){
     header{padding:10px 12px 36px 12px}.tagline{display:none!important}.brand{min-width:0}.hud{gap:5px}.stat{min-width:48px}.hudBtn{padding:8px}
     .hudBtnLabel{display:none}
+    .userNameLabel{display:none}
+    .userChip{padding:5px}
     .island-container{ left: 110px; scale: 0.8; }
     .tankComposer{
       top: 14px;
@@ -692,6 +701,15 @@
       <div class="stat"><span><i class="fa-solid fa-trophy"></i></span><b id="level">1</b><small>LEVEL</small></div>
       <button class="hudBtn" id="shopBtn" title="Fish Skin Shop"><i class="fa-solid fa-anchor"></i> <span class="hudBtnLabel">Fish Port</span></button>
       <button class="hudBtn" id="clearBtn" type="button" title="Empty the whole tank"><i class="fa-solid fa-trash-can"></i> <span class="hudBtnLabel">Reset</span></button>
+      <button class="hudBtn authBtn" id="signInBtn" type="button" title="Sign in with Google to save your tasks to your account">
+        <svg width="15" height="15" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.5 6.1 29.6 4 24 4c-7.6 0-14.1 4.3-17.4 10.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-2.1 14.1-5.5l-6.5-5.5C29.5 34.7 26.9 36 24 36c-5.3 0-9.6-3.4-11.3-8.1l-6.6 5.1C9.9 39.6 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.9l6.5 5.5C39.5 37.5 44 31.4 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+        <span class="hudBtnLabel">Sign in</span>
+      </button>
+      <div class="userChip" id="userChip" style="display:none">
+        <img class="userAvatar" id="userAvatar" alt="">
+        <span class="userNameLabel" id="userName"></span>
+        <button class="signOutBtn" id="signOutBtn" type="button" title="Sign out"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
     </div>
   </header>
 
@@ -842,7 +860,41 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+  // ---- Firebase setup ----
+  // 1. Create a project at https://console.firebase.google.com
+  // 2. Add a Web app to it, then paste the config object it gives you below.
+  // 3. In Build > Authentication > Sign-in method, enable "Google".
+  // 4. In Build > Firestore Database, create a database, then set these
+  //    security rules (Rules tab) so each signed-in user can only read/write
+  //    their own document:
+  //      rules_version = '2';
+  //      service cloud.firestore {
+  //        match /databases/{database}/documents {
+  //          match /users/{userId} {
+  //            allow read, write: if request.auth != null && request.auth.uid == userId;
+  //          }
+  //        }
+  //      }
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAavDSI1uUIugCYQU62YOxk5bFfyNGtEyU",
+    authDomain: "finlist-it.firebaseapp.com",
+    projectId: "finlist-it",
+    storageBucket: "finlist-it.firebasestorage.app",
+    messagingSenderId: "696094350990",
+    appId: "1:696094350990:web:0e5a6d71c89b9a122d73df",
+    measurementId: "G-F2EP63MQ2Y"
+  };
+
+  const firebaseApp = initializeApp(firebaseConfig);
+  const auth = getAuth(firebaseApp);
+  const db = getFirestore(firebaseApp);
+  const googleProvider = new GoogleAuthProvider();
+
 (function(){
   const COLORS = ['#5EEAD4', '#FF6F59', '#E8C288', '#B9A6FF', '#7FD1FF'];
 
@@ -867,8 +919,7 @@
     {id:'shark', name:'Great White Shark', cost:1500, emoji:'🦈', color:'#8DA7B5', accent:'#DCEAF0', unlockLevel:9},
     {id:'octopus', name:'Royal Octopus', cost:2200, emoji:'🐙', color:'#B86BCE', accent:'#F4B7E9', unlockLevel:11},
     {id:'manta', name:'Manta Ray', cost:3000, emoji:'🌊', color:'#526C80', accent:'#9FD5E7', unlockLevel:13},
-    {id:'whale', name:'Blue Whale', cost:4200, emoji:'🐋', color:'#4C91B8', accent:'#B8E4F2', unlockLevel:15},
-    {id:'gyrados', name:'Gyrados', cost:5200, emoji:'🐋', color:'#4C91B8', accent:'#B8E4F2', unlockLevel:20}
+    {id:'whale', name:'Blue Whale', cost:4200, emoji:'🐋', color:'#4C91B8', accent:'#B8E4F2', unlockLevel:15}
   ];
 
   const SEA_COLORS = [
@@ -938,16 +989,7 @@
       octopus: `<ellipse cx="50" cy="18" rx="28" ry="20" fill="${color}"/>
         <circle cx="40" cy="17" r="3.6" fill="#fff"/><circle cx="41" cy="17" r="1.8" fill="#35203D"/>
         <circle cx="60" cy="17" r="3.6" fill="#fff"/><circle cx="61" cy="17" r="1.8" fill="#35203D"/>
-        <path d="M24 31 Q13 43 20 56 M35 34 Q27 48 35 60 M48 35 Q46 50 52 61 M61 34 Q67 49 61 60 M73 31 Q85 43 78 56 M83 29 Q97 37 92 51" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"/>`,
-      gyrados:`
-<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="56" height="56">
-	<defs>
-		<image  width="56" height="56" id="img1" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4BAMAAABaqCYtAAAAAXNSR0IB2cksfwAAAA9QTFRF////MTExSlKl////rbX/bPv9WAAAAAV0Uk5TAP////8c0CZSAAADo0lEQVR4nG2Uz3faOBDHR3KPGyxbXGNkk+MGHLhvs7z+2WlL91zAlGtty8kVWzJca2lHhjSkid7jYetjzY+vZobA2xU25wfydpekm3fgeZdH70E+/UIHmsxy/RaSf9caD3PxHuSDEi1nM3gN47I/WCKcFYnZwCUc/sJvud9ohFL8AUOjIY5LrWDMgDWvIbn/5nsDO143PAZWS/DlBRTH7k62AkpyB1DTZ8MnOK7npkxa1v2YbvioKfVlKiFNC8sZdN6aWVHK3z6FJAGEolBzgEIFAcnVS0DEDm+3ISYwNxJUGLC8fIF0QKdblkC3ZQCWxtDDWOneZ0Aswz96neGml0LR6Fgn+RkCY62zkuCv5kYqfOqzQTjsmHAm+2VjdExF0KzP8Bayi4tjoP0xfNcnyMnkMdqQGawZUNFVYL1m9htaX3iFolHv2BIY7W69uuwDisPBobrd+lTNXBRoNm54NjJV40RYZEZILlZzQJO4qDAZTRUUltwvh5Ywv5i7/SwF5cRTQQJWGzJbDy0YSKoUwKAjL7VrCEbeCj2Qu83wiknwohCltS2zGlVJOq/7ijSRixxhqnlhNYpnytYJ/RR9QcgHrY9QgIY2FPDwaRVQAXnLXLlxYaopKiQqy5HhxTMHZYBFR2LKpIHAsgqmmSusEK0arP2RxIjus7C5k1ZIT0C325MAYa76KiI0mOin1JQiQ6sA31uGzdLCqRkhpuaYmq0Bb4pZmK/MnejUufq4mUPO88CG7v0qQ3UP8Ot0K3QKx6hkFQOsaiMxphuRHwZW9tWXsi1rjft+ZB//XgLCop2WSHuzIB6tDayeNcef0EPiH2pfIkx8meonY/GzZvaANXkTlYkKbaMQkjB6nOyM70KYf/ZbsjDlWAW5lYT6Kj7EBe0hDouS0n/kIS3JHuUj8xxPBCMtIdB08mMPN0ahqqXTFnhc4yWt0krjPMhgn4gNWtB1Hy2ZX1VJNrEoX4ftgG2AGc/0Hk6pTOXIg42hYrBDYVACUSX1hhp3ks1lN36Ix7X0rv2lyxLrq2819CkCaaIlxMe0ftoDXWAL4/2eIGHUwmQJw8a3HxzENuOj1bkdsB/oXxKGe3z7+F8SSSWO4rlXcBjGpKAM75eOjhNp6YC7wnyGZGxoM5A0iUpXVipZnysBhwION+96N5FUYO1CQgrfypc55Hof3KixmsTkqtINXEKINV631b78BGs7Xb6GaN7vB+KHa/B+wp/wvBYyWp4f/wedTdy7YGn9aAAAAABJRU5ErkJggg=="/>
-	</defs>
-	<style>
-	</style>
-	<use id="Background" href="#img1" x="0" y="0"/>
-</svg>`
+        <path d="M24 31 Q13 43 20 56 M35 34 Q27 48 35 60 M48 35 Q46 50 52 61 M61 34 Q67 49 61 60 M73 31 Q85 43 78 56 M83 29 Q97 37 92 51" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"/>`
     };
 
     const custom = customSkins.find(x => x.id === skin);
@@ -965,14 +1007,13 @@
     }
 
     const body = shapes[skin] || shapes.classic;
-    const hideDefaultEye = ['octopus', 'shark', 'whale', 'gyrados'].includes(skin);
+    const hideDefaultEye = ['octopus', 'shark', 'whale'].includes(skin);
 
     return `<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
       ${body}
       ${hideDefaultEye ? '' : `<circle cx="82" cy="25" r="3.4" fill="#06282C"/><circle cx="83" cy="24" r="1.2" fill="#fff"/>`}
       ${skin === 'shark' ? `<circle cx="86" cy="18" r="3" fill="#06282C"/><circle cx="87" cy="17" r="1" fill="#fff"/>` : ''}
       ${skin === 'whale' ? `<circle cx="84" cy="22" r="3.2" fill="#06282C"/><circle cx="85" cy="21" r="1" fill="#fff"/>` : ''}
-     
     </svg>`;
   }
 
@@ -1092,7 +1133,18 @@
     typeof window.storage.set === 'function' &&
     typeof window.storage.get === 'function';
 
+  let currentUser = null;
+  let authReady = false;
+
   async function persistWrite(payloadStr){
+    if(currentUser){
+      try{
+        await setDoc(doc(db, 'users', currentUser.uid), { data: payloadStr, updatedAt: Date.now() });
+        return;
+      }catch(e){
+        console.warn('Cloud save failed, falling back to local storage', e);
+      }
+    }
     if(hasArtifactStorage()){
       try{
         await window.storage.set(STORAGE_KEY, payloadStr, false);
@@ -1109,6 +1161,14 @@
   }
 
   async function persistRead(){
+    if(currentUser){
+      try{
+        const snap = await getDoc(doc(db, 'users', currentUser.uid));
+        return snap.exists() ? snap.data().data : null;
+      }catch(e){
+        console.warn('Cloud read failed, falling back to local storage', e);
+      }
+    }
     if(hasArtifactStorage()){
       try{
         const res = await window.storage.get(STORAGE_KEY, false);
@@ -1134,6 +1194,17 @@
     }catch(e){ console.error('save failed', e); }
   }
 
+  function resetToDefaults(){
+    tasks = []; caught = []; points = 0; level = 1;
+    ownedItems = ['classic', 'sea-default']; equippedSkin = 'classic'; equippedSea = 'sea-default'; customSkins = [];
+  }
+
+  function clearTankFishDOM(){
+    // Needed because loadState() can now re-run mid-session (sign in/out,
+    // switching accounts) rather than only once at page load.
+    document.querySelectorAll('.fish-wrap').forEach(el => el.remove());
+  }
+
   async function loadState(){
     try{
       const raw = await persistRead();
@@ -1147,11 +1218,14 @@
         equippedSkin = parsed.equippedSkin || 'classic';
         equippedSea = parsed.equippedSea || 'sea-default';
         customSkins = parsed.customSkins || [];
+      }else{
+        resetToDefaults();
       }
     }catch(e){
       console.error('load failed', e);
-      tasks = []; caught = []; points = 0; level = 1; ownedItems = ['classic', 'sea-default']; equippedSkin = 'classic'; equippedSea = 'sea-default'; customSkins = [];
+      resetToDefaults();
     }
+    clearTankFishDOM();
     tasks.forEach(renderFish);
     applySeaColor();
     updateSubgrid();
@@ -1159,6 +1233,48 @@
     updateBasketCount();
     updateProgress();
   }
+
+  function updateAuthUI(){
+    const signInBtn = document.getElementById('signInBtn');
+    const userChip = document.getElementById('userChip');
+    const userAvatar = document.getElementById('userAvatar');
+    const userName = document.getElementById('userName');
+    if(currentUser){
+      signInBtn.style.display = 'none';
+      userChip.style.display = 'flex';
+      if(currentUser.photoURL){
+        userAvatar.src = currentUser.photoURL;
+        userAvatar.style.display = 'block';
+      }else{
+        userAvatar.style.display = 'none';
+      }
+      userName.textContent = (currentUser.displayName || currentUser.email || 'Account').split(' ')[0];
+      userChip.title = currentUser.email || '';
+    }else{
+      signInBtn.style.display = 'flex';
+      userChip.style.display = 'none';
+    }
+  }
+
+  async function signInWithGoogle(){
+    try{
+      await signInWithPopup(auth, googleProvider);
+    }catch(e){
+      console.error('Sign-in failed', e);
+      showToast('⚠️ Sign-in failed. Please try again.');
+    }
+  }
+
+  async function signOutUser(){
+    try{
+      await signOut(auth);
+    }catch(e){
+      console.error('Sign-out failed', e);
+    }
+  }
+
+  document.getElementById('signInBtn').addEventListener('click', signInWithGoogle);
+  document.getElementById('signOutBtn').addEventListener('click', signOutUser);
 
   function applySeaColor(){
     const sea = SEA_COLORS.find(s => s.id === equippedSea) || SEA_COLORS[0];
@@ -1728,8 +1844,37 @@
   });
 
   spawnBubbles();
-  loadState();
-  updateProgress();
+  updateAuthUI();
+
+  onAuthStateChanged(auth, async (user) => {
+    const wasSignedIn = !!currentUser;
+    currentUser = user;
+    updateAuthUI();
+
+    if(user && !wasSignedIn){
+      // First time this account has ever signed in on any device: if there's
+      // no cloud save yet but this browser has local guest data, bring it
+      // up to the cloud instead of silently discarding it.
+      try{
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if(!snap.exists()){
+          let localRaw = null;
+          try{ localRaw = localStorage.getItem(STORAGE_KEY); }catch(e){}
+          if(localRaw){
+            await setDoc(doc(db, 'users', user.uid), { data: localRaw, updatedAt: Date.now() });
+          }
+        }
+      }catch(e){ console.warn('Cloud migration check failed', e); }
+    }
+
+    await loadState();
+
+    if(authReady){
+      if(user) showToast(`👋 Signed in as ${(user.displayName || user.email || 'friend').split(' ')[0]} — synced to your account.`);
+      else showToast('Signed out — now saving on this device only.');
+    }
+    authReady = true;
+  });
 })();
 </script>
 </body>
