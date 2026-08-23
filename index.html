@@ -919,7 +919,8 @@
     {id:'shark', name:'Great White Shark', cost:1500, emoji:'🦈', color:'#8DA7B5', accent:'#DCEAF0', unlockLevel:9},
     {id:'octopus', name:'Royal Octopus', cost:2200, emoji:'🐙', color:'#B86BCE', accent:'#F4B7E9', unlockLevel:11},
     {id:'manta', name:'Manta Ray', cost:3000, emoji:'🌊', color:'#526C80', accent:'#9FD5E7', unlockLevel:13},
-    {id:'whale', name:'Blue Whale', cost:4200, emoji:'🐋', color:'#4C91B8', accent:'#B8E4F2', unlockLevel:15}
+    {id:'whale', name:'Blue Whale', cost:4200, emoji:'🐋', color:'#4C91B8', accent:'#B8E4F2', unlockLevel:15},
+    {id:'gyrados', name:'Gyrados', cost:5200, emoji:'🐋', color:'#4C91B8', accent:'#B8E4F2', unlockLevel:20}
   ];
 
   const SEA_COLORS = [
@@ -989,7 +990,18 @@
       octopus: `<ellipse cx="50" cy="18" rx="28" ry="20" fill="${color}"/>
         <circle cx="40" cy="17" r="3.6" fill="#fff"/><circle cx="41" cy="17" r="1.8" fill="#35203D"/>
         <circle cx="60" cy="17" r="3.6" fill="#fff"/><circle cx="61" cy="17" r="1.8" fill="#35203D"/>
-        <path d="M24 31 Q13 43 20 56 M35 34 Q27 48 35 60 M48 35 Q46 50 52 61 M61 34 Q67 49 61 60 M73 31 Q85 43 78 56 M83 29 Q97 37 92 51" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"/>`
+        <path d="M24 31 Q13 43 20 56 M35 34 Q27 48 35 60 M48 35 Q46 50 52 61 M61 34 Q67 49 61 60 M73 31 Q85 43 78 56 M83 29 Q97 37 92 51" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"/>`,
+        gyrados:`
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="56" height="56">
+	<defs>
+		<image  width="56" height="56" id="img1" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4BAMAAABaqCYtAAAAAXNSR0IB2cksfwAAAA9QTFRF////MTExSlKl////rbX/bPv9WAAAAAV0Uk5TAP////8c0CZSAAADo0lEQVR4nG2Uz3faOBDHR3KPGyxbXGNkk+MGHLhvs7z+2WlL91zAlGtty8kVWzJca2lHhjSkid7jYetjzY+vZobA2xU25wfydpekm3fgeZdH70E+/UIHmsxy/RaSf9caD3PxHuSDEi1nM3gN47I/WCKcFYnZwCUc/sJvud9ohFL8AUOjIY5LrWDMgDWvIbn/5nsDO143PAZWS/DlBRTH7k62AkpyB1DTZ8MnOK7npkxa1v2YbvioKfVlKiFNC8sZdN6aWVHK3z6FJAGEolBzgEIFAcnVS0DEDm+3ISYwNxJUGLC8fIF0QKdblkC3ZQCWxtDDWOneZ0Aswz96neGml0LR6Fgn+RkCY62zkuCv5kYqfOqzQTjsmHAm+2VjdExF0KzP8Bayi4tjoP0xfNcnyMnkMdqQGawZUNFVYL1m9htaX3iFolHv2BIY7W69uuwDisPBobrd+lTNXBRoNm54NjJV40RYZEZILlZzQJO4qDAZTRUUltwvh5Ywv5i7/SwF5cRTQQJWGzJbDy0YSKoUwKAjL7VrCEbeCj2Qu83wiknwohCltS2zGlVJOq/7ijSRixxhqnlhNYpnytYJ/RR9QcgHrY9QgIY2FPDwaRVQAXnLXLlxYaopKiQqy5HhxTMHZYBFR2LKpIHAsgqmmSusEK0arP2RxIjus7C5k1ZIT0C325MAYa76KiI0mOin1JQiQ6sA31uGzdLCqRkhpuaYmq0Bb4pZmK/MnejUufq4mUPO88CG7v0qQ3UP8Ot0K3QKx6hkFQOsaiMxphuRHwZW9tWXsi1rjft+ZB//XgLCop2WSHuzIB6tDayeNcef0EPiH2pfIkx8meonY/GzZvaANXkTlYkKbaMQkjB6nOyM70KYf/ZbsjDlWAW5lYT6Kj7EBe0hDouS0n/kIS3JHuUj8xxPBCMtIdB08mMPN0ahqqXTFnhc4yWt0krjPMhgn4gNWtB1Hy2ZX1VJNrEoX4ftgG2AGc/0Hk6pTOXIg42hYrBDYVACUSX1hhp3ks1lN36Ix7X0rv2lyxLrq2819CkCaaIlxMe0ftoDXWAL4/2eIGHUwmQJw8a3HxzENuOj1bkdsB/oXxKGe3z7+F8SSSWO4rlXcBjGpKAM75eOjhNp6YC7wnyGZGxoM5A0iUpXVipZnysBhwION+96N5FUYO1CQgrfypc55Hof3KixmsTkqtINXEKINV631b78BGs7Xb6GaN7vB+KHa/B+wp/wvBYyWp4f/wedTdy7YGn9aAAAAABJRU5ErkJggg=="/>
+	</defs>
+	<style>
+	</style>
+	<use id="Background" href="#img1" x="0" y="0"/>
+</svg>`
+    };
+
     };
 
     const custom = customSkins.find(x => x.id === skin);
@@ -1007,12 +1019,13 @@
     }
 
     const body = shapes[skin] || shapes.classic;
-    const hideDefaultEye = ['octopus', 'shark', 'whale'].includes(skin);
+    const hideDefaultEye = ['octopus', 'shark', 'whale', 'gyrados'].includes(skin);
 
     return `<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
       ${body}
       ${hideDefaultEye ? '' : `<circle cx="82" cy="25" r="3.4" fill="#06282C"/><circle cx="83" cy="24" r="1.2" fill="#fff"/>`}
       ${skin === 'shark' ? `<circle cx="86" cy="18" r="3" fill="#06282C"/><circle cx="87" cy="17" r="1" fill="#fff"/>` : ''}
+      ${skin === 'whale' ? `<circle cx="84" cy="22" r="3.2" fill="#06282C"/><circle cx="85" cy="21" r="1" fill="#fff"/>` : ''}
       ${skin === 'whale' ? `<circle cx="84" cy="22" r="3.2" fill="#06282C"/><circle cx="85" cy="21" r="1" fill="#fff"/>` : ''}
     </svg>`;
   }
