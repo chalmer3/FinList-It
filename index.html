@@ -656,6 +656,14 @@
   .friendTaskList{ display:flex; flex-direction:column; gap:8px; margin:16px 0; max-height:34vh; overflow-y:auto; }
   .friendTaskRow{ display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--glass); border:1px solid var(--glass-border); border-radius:12px; padding:9px 12px; }
   .friendTaskRow .txt{ font-size:13px; color:var(--text-light); word-break:break-word; flex:1; }
+
+  .miniTank{ position:relative; width:100%; height:170px; border-radius:16px; overflow:hidden; margin:14px 0 6px; border:1px solid var(--glass-border); box-shadow: inset 0 0 30px rgba(0,0,0,.3); background: linear-gradient(180deg, var(--tank-top), var(--tank-bottom)); }
+  .miniTankEmpty{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px; text-align:center; padding:0 20px; }
+  .miniFishWrap{ position:absolute; width:52px; height:32px; pointer-events:none; animation: var(--swimname) var(--duration) linear infinite; animation-delay: var(--sdelay); top: var(--lane); }
+  .miniFishWrap .fish-bob{ width:100%; height:100%; animation: bob var(--bobdur) ease-in-out infinite alternate; }
+  @keyframes miniSwimRtl{ from{ left:-20%; } to{ left:118%; } }
+  @keyframes miniSwimLtr{ from{ left:118%; } to{ left:-20%; } }
+
   .suggestForm{ display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--glass-border); padding-top:14px; margin-top:6px; }
   .suggestForm input{ background:var(--glass); color:var(--text-light); border:1px solid var(--glass-border); border-radius:12px; padding:10px 12px; font-size:13px; }
   .suggestForm .segRow{ display:flex; gap:6px; align-items:center; }
@@ -944,6 +952,7 @@
         <div class="sub" id="friendTankSub">Read-only view</div>
       </div>
     </div>
+    <div class="miniTank" id="friendMiniTank"></div>
     <div class="friendTaskList" id="friendTaskList"></div>
     <form class="suggestForm" id="suggestForm">
       <input id="suggestInput" type="text" maxlength="140" placeholder="Suggest a task for them..." autocomplete="off">
@@ -1067,7 +1076,7 @@
 
   function uid(){ return 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
-  function fishSVG(color, accent = '#06282C', skin = 'classic'){
+  function fishSVG(color, accent = '#06282C', skin = 'classic', customOverride){
     const shapes = {
       classic: `<svg viewBox="-20 -20 120 100" xmlns="http://www.w3.org/2000/svg">
   <!-- Body: gentle side-to-side "flex" to simulate swimming -->
@@ -1264,7 +1273,7 @@
 
     };
 
-    const custom = customSkins.find(x => x.id === skin);
+    const custom = customOverride !== undefined ? customOverride : customSkins.find(x => x.id === skin);
     if(custom){
       if(custom.svgMarkup){
         // Pasted SVG designs come with their own art (eyes included, if any) —
@@ -1497,7 +1506,27 @@
         uid: currentUser.uid,
         name: (currentUser.displayName || currentUser.email || 'Friend').split(' ')[0],
         photoURL: currentUser.photoURL || null,
-        tasks: tasks.map(t => ({ id: t.id, text: t.text, priority: t.priority || 'normal', createdAt: t.createdAt })),
+        equippedSea: equippedSea,
+        tasks: tasks.map(t => {
+          const skinObj = getSkin(t.skinId || equippedSkin);
+          const isBuiltIn = SKINS.some(s => s.id === skinObj.id);
+          return {
+            id: t.id,
+            text: t.text,
+            priority: t.priority || 'normal',
+            createdAt: t.createdAt,
+            color: skinObj.color || t.color || '#5EEAD4',
+            accent: skinObj.accent || '#06282C',
+            skinId: skinObj.id,
+            // Mirror the fully-resolved custom skin (not just its id) so a
+            // friend viewing this tank can render it without needing our
+            // private customSkins list.
+            custom: isBuiltIn ? null : (skinObj.svgMarkup
+              ? { svgMarkup: skinObj.svgMarkup }
+              : { style: skinObj.style, color: skinObj.color, accent: skinObj.accent }),
+            lane: t.lane, duration: t.duration, delay: t.delay, dir: t.dir, bobdur: t.bobdur
+          };
+        }),
         updatedAt: Date.now()
       });
     }catch(e){ console.warn('publicTank sync failed', e); }
@@ -1749,17 +1778,20 @@
   }
 
   function showOverlay(id){ document.getElementById(id).classList.add('show'); }
-  function hideOverlay(id){ document.getElementById(id).classList.remove('show'); }
+  function hideOverlay(id){
+    document.getElementById(id).classList.remove('show');
+    if(id === 'friendTankPanel') cleanupFriendTankListener();
+  }
 
   document.querySelectorAll('[data-close]').forEach(btn => {
     btn.addEventListener('click', () => hideOverlay(btn.getAttribute('data-close')));
   });
   document.querySelectorAll('.overlay').forEach(ov => {
-    ov.addEventListener('click', (e) => { if(e.target === ov) ov.classList.remove('show'); });
+    ov.addEventListener('click', (e) => { if(e.target === ov) hideOverlay(ov.id); });
   });
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape'){
-      document.querySelectorAll('.overlay.show').forEach(ov => ov.classList.remove('show'));
+      document.querySelectorAll('.overlay.show').forEach(ov => hideOverlay(ov.id));
     }
   });
 
@@ -1928,30 +1960,74 @@
   }
 
   let viewingFriend = null;
+  let friendTankUnsub = null;
 
-  async function viewFriendTank(friend){
+  function cleanupFriendTankListener(){
+    if(friendTankUnsub){ friendTankUnsub(); friendTankUnsub = null; }
+  }
+
+  function viewFriendTank(friend){
     viewingFriend = friend;
     document.getElementById('friendTankName').textContent = `${friend.name || friend.email}'s tank`;
     document.getElementById('friendTankAvatar').src = friend.photoURL || '';
     document.getElementById('friendTankSub').textContent = 'Loading their tank…';
+    document.getElementById('friendMiniTank').innerHTML = '';
     document.getElementById('friendTaskList').innerHTML = '';
     showOverlay('friendTankPanel');
-    try{
-      const snap = await getDoc(doc(db, 'publicTank', friend.uid));
-      const remoteTasks = snap.exists() ? (snap.data().tasks || []) : [];
-      renderFriendTaskList(remoteTasks);
-    }catch(e){
-      console.error('view friend tank failed', e);
+
+    cleanupFriendTankListener();
+    // Live updates: their fish appear/disappear here as they add or finish tasks.
+    friendTankUnsub = onSnapshot(doc(db, 'publicTank', friend.uid), (snap) => {
+      const data = snap.exists() ? snap.data() : { tasks: [], equippedSea: 'sea-default' };
+      renderFriendMiniTank(data.tasks || [], data.equippedSea || 'sea-default');
+      renderFriendTaskList(data.tasks || []);
+    }, (err) => {
+      console.error('view friend tank failed', err);
       document.getElementById('friendTankSub').textContent = "Couldn't load their tank.";
+    });
+  }
+
+  function renderFriendMiniTank(remoteTasks, seaId){
+    const tankBox = document.getElementById('friendMiniTank');
+    const sea = SEA_COLORS.find(s => s.id === seaId) || SEA_COLORS[0];
+    tankBox.style.background = `linear-gradient(180deg, ${sea.top}, ${sea.bottom})`;
+    tankBox.innerHTML = '';
+    if(remoteTasks.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'miniTankEmpty';
+      empty.textContent = 'Their tank is empty right now 🫧';
+      tankBox.appendChild(empty);
+      return;
     }
+    remoteTasks.forEach(t => {
+      const wrap = document.createElement('div');
+      wrap.className = 'miniFishWrap priority-' + (t.priority || 'normal');
+      wrap.style.setProperty('--lane', (t.lane || 30) + '%');
+      wrap.style.setProperty('--duration', (t.duration || 18) + 's');
+      wrap.style.setProperty('--sdelay', '-' + (t.delay || 0) + 's');
+      wrap.style.setProperty('--swimname', t.dir === 'rtl' ? 'miniSwimRtl' : 'miniSwimLtr');
+      wrap.title = `${(PRIORITY[t.priority || 'normal'] || PRIORITY.normal).label} task: ${t.text}`;
+
+      const bob = document.createElement('div');
+      bob.className = 'fish-bob' + (t.dir === 'ltr' ? ' fish-flip' : '');
+      bob.style.setProperty('--bobdur', (t.bobdur || 3) + 's');
+
+      const btn = document.createElement('div');
+      btn.className = 'fish-btn';
+      btn.innerHTML = fishSVG(t.color, t.accent, t.skinId, t.custom || null);
+
+      bob.appendChild(btn);
+      wrap.appendChild(bob);
+      tankBox.appendChild(wrap);
+    });
   }
 
   function renderFriendTaskList(remoteTasks){
     const listEl = document.getElementById('friendTaskList');
     const subEl = document.getElementById('friendTankSub');
-    subEl.textContent = `${remoteTasks.length} active task${remoteTasks.length === 1 ? '' : 's'} · read-only`;
+    subEl.textContent = `${remoteTasks.length} active task${remoteTasks.length === 1 ? '' : 's'} · live view`;
     if(remoteTasks.length === 0){
-      listEl.innerHTML = '<div class="friendsEmpty">Their tank is empty right now.</div>';
+      listEl.innerHTML = '';
       return;
     }
     listEl.innerHTML = '';
