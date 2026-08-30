@@ -658,6 +658,14 @@
   .friendTaskRow .txt{ font-size:13px; color:var(--text-light); word-break:break-word; flex:1; }
 
   .miniTank{ position:relative; width:100%; height:170px; border-radius:16px; overflow:hidden; margin:14px 0 6px; border:1px solid var(--glass-border); box-shadow: inset 0 0 30px rgba(0,0,0,.3); background: linear-gradient(180deg, var(--tank-top), var(--tank-bottom)); }
+  .friendTankCard{ width:min(560px, 92vw) !important; }
+  .friendTankCard .miniTank{ height:280px; }
+  .friendTankCard .friendTaskList{ max-height:22vh; }
+  .friendTankCard .miniFishWrap{ width:64px; height:40px; }
+  @media(max-width:700px){
+    .friendTankCard .miniTank{ height:200px; }
+    .friendTankCard .miniFishWrap{ width:52px; height:32px; }
+  }
   .miniTankEmpty{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px; text-align:center; padding:0 20px; }
   .miniFishWrap{ position:absolute; width:52px; height:32px; pointer-events:none; animation: var(--swimname) var(--duration) linear infinite; animation-delay: var(--sdelay); top: var(--lane); }
   .miniFishWrap .fish-bob{ width:100%; height:100%; animation: bob var(--bobdur) ease-in-out infinite alternate; }
@@ -943,7 +951,7 @@
 
 <!-- friend tank viewer -->
 <div class="overlay" id="friendTankPanel">
-  <div class="card">
+  <div class="card friendTankCard">
     <button class="closeX" data-close="friendTankPanel">✕</button>
     <div class="friendTankHeader">
       <img id="friendTankAvatar" alt="">
